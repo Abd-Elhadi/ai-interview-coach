@@ -12,6 +12,8 @@ pinned: false
 
 # AI Interview Coach
 
+[Hugging Face Space](https://huggingface.co/spaces/abdelhadiOM/ai-interview-coach)
+
 Multi-agent mock interview coach built with CrewAI and a custom MCP server.
 
 ## What it does
