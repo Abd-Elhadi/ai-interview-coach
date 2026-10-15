@@ -1,0 +1,72 @@
+analyze_job:
+    description: >
+        Analyze this job description. Return title, seniority (junior, mid, or senior),
+        required skills, preferred skills, responsibilities, and interview themes.
+
+        Job description:
+        {job_description}
+    expected_output: >
+        JSON matching the JobProfile schema.
+    agent: job_analyst
+
+analyze_resume:
+    description: >
+        Analyze this resume. Return a summary, skills, experiences, projects, and
+        evidence points (concrete achievements with tools or numbers when present).
+
+        Resume:
+        {resume_text}
+    expected_output: >
+        JSON matching the ResumeProfile schema.
+    agent: resume_analyst
+
+plan_interview:
+    description: >
+        Using the job profile and resume profile, call get_interview_questions once for
+        each category: behavioral, technical, situational. Use the job title as role and
+        the job seniority as level. Pick one question per category, adapt the wording to
+        the candidate evidence, and keep the source question id. Order: behavioral,
+        technical, situational.
+    expected_output: >
+        JSON matching the InterviewPlan schema with exactly 3 questions.
+    agent: interview_planner
+    context:
+        - analyze_job
+        - analyze_resume
+
+generate_followup:
+    description: >
+        Question: {question}
+        Confirmed answer: {answer}
+
+        If the answer misses an obvious element (situation, result, tradeoff), write one
+        follow-up under 25 words. Otherwise set needed to false.
+    expected_output: >
+        JSON matching the FollowUp schema.
+    agent: interviewer
+
+evaluate_answer:
+    description: >
+        Question type: {question_type}
+        Question: {question}
+        Confirmed answer: {answer}
+
+        Call get_scoring_rubric and get_delivery_guidelines for this question type. Score
+        every rubric dimension from 1 to 5. For each score, include a short evidence note
+        pointing to a specific statement or omission in the answer, and one suggestion.
+        List strengths, gaps, and improvements. Do not judge accent, personality, or
+        hiring suitability.
+    expected_output: >
+        JSON matching the AnswerEvaluation schema.
+    agent: evaluation_coach
+
+write_final_report:
+    description: >
+        Combine these per-question evaluations into one report:
+        {evaluations_json}
+
+        Write a short summary, the top strengths, the top gaps, and a prioritized action
+        plan. Every item must trace back to an evaluation. Set approved to false.
+    expected_output: >
+        JSON matching the FinalReport schema.
+    agent: evaluation_coach
