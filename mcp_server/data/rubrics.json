@@ -1,0 +1,12 @@
+{
+    "behavioral": {
+        "dimensions": [
+            {"name": "relevance", "weight": 0.25},
+            {"name": "star_structure", "weight": 0.25},
+            {"name": "specificity", "weight": 0.2},
+            {"name": "impact", "weight": 0.2},
+            {"name": "clarity", "weight": 0.1}
+        ],
+        "scale": "1-5"
+    }
+}
