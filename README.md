@@ -1,3 +1,15 @@
+---
+title: AI Interview Coach
+emoji: 🎤
+colorFrom: blue
+colorTo: indigo
+sdk: gradio
+sdk_version: "YOUR_INSTALLED_GRADIO_VERSION"
+python_version: "3.12"
+app_file: app.py
+pinned: false
+---
+
 # AI Interview Coach
 
 Multi-agent mock interview coach built with CrewAI and a custom MCP server.
