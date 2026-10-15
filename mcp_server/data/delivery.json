@@ -1,0 +1,23 @@
+{
+    "behavioral": {
+        "question_type": "behavioral",
+        "recommended_duration_seconds": {"minimum": 60, "maximum": 120},
+        "recommended_structure": "Situation, Task, Action, Result",
+        "filler_word_guidance": "Pause briefly to organize thoughts instead of using filler words.",
+        "coaching_goal": "Give a clear, specific answer with measurable impact."
+    },
+    "technical": {
+        "question_type": "technical",
+        "recommended_duration_seconds": {"minimum": 45, "maximum": 120},
+        "recommended_structure": "Approach, design, tradeoffs, example",
+        "filler_word_guidance": "State the approach first, then details, to avoid trailing off.",
+        "coaching_goal": "Explain the reasoning, not only the final answer."
+    },
+    "situational": {
+        "question_type": "situational",
+        "recommended_duration_seconds": {"minimum": 45, "maximum": 90},
+        "recommended_structure": "Clarify, prioritize, act, follow up",
+        "filler_word_guidance": "Name the steps out loud in order.",
+        "coaching_goal": "Show a clear decision process and how you handle risk."
+    }
+}

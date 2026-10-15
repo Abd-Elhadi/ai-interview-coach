@@ -1,12 +1,107 @@
 {
     "behavioral": {
         "dimensions": [
-            {"name": "relevance", "weight": 0.25},
-            {"name": "star_structure", "weight": 0.25},
-            {"name": "specificity", "weight": 0.2},
-            {"name": "impact", "weight": 0.2},
-            {"name": "clarity", "weight": 0.1}
+            {
+                "name": "relevance",
+                "weight": 0.25,
+                "description": "Answer addresses the question and the job requirements."
+            },
+            {
+                "name": "star_structure",
+                "weight": 0.25,
+                "description": "Situation, task, action, and result are all present."
+            },
+            {
+                "name": "specificity",
+                "weight": 0.2,
+                "description": "Names tools, decisions, and concrete details."
+            },
+            {
+                "name": "impact",
+                "weight": 0.2,
+                "description": "States a measurable or clear outcome."
+            },
+            {
+                "name": "clarity",
+                "weight": 0.1,
+                "description": "Organized, concise, ends with a conclusion."
+            }
         ],
-        "scale": "1-5"
+        "scale": "1-5",
+        "anchors": {
+            "1": "Missing or off-topic",
+            "3": "Partly covered, lacks detail",
+            "5": "Complete, specific, evidenced"
+        }
+    },
+    "technical": {
+        "dimensions": [
+            {
+                "name": "correctness",
+                "weight": 0.3,
+                "description": "Technical statements are accurate."
+            },
+            {
+                "name": "depth",
+                "weight": 0.25,
+                "description": "Goes beyond definitions into how and why."
+            },
+            {
+                "name": "specificity",
+                "weight": 0.2,
+                "description": "Uses concrete technologies, examples, or numbers."
+            },
+            {
+                "name": "tradeoffs",
+                "weight": 0.15,
+                "description": "Discusses alternatives and their costs."
+            },
+            {
+                "name": "clarity",
+                "weight": 0.1,
+                "description": "Explained in a logical order."
+            }
+        ],
+        "scale": "1-5",
+        "anchors": {
+            "1": "Incorrect or missing",
+            "3": "Correct but shallow",
+            "5": "Accurate, deep, with tradeoffs"
+        }
+    },
+    "situational": {
+        "dimensions": [
+            {
+                "name": "problem_framing",
+                "weight": 0.25,
+                "description": "Clarifies the situation and constraints first."
+            },
+            {
+                "name": "approach",
+                "weight": 0.3,
+                "description": "Gives a logical, actionable sequence of steps."
+            },
+            {
+                "name": "tradeoffs",
+                "weight": 0.2,
+                "description": "Weighs options and justifies the choice."
+            },
+            {
+                "name": "risk_handling",
+                "weight": 0.15,
+                "description": "Identifies risks and communication needs."
+            },
+            {
+                "name": "clarity",
+                "weight": 0.1,
+                "description": "Organized and concise."
+            }
+        ],
+        "scale": "1-5",
+        "anchors": {
+            "1": "No clear approach",
+            "3": "Reasonable but incomplete",
+            "5": "Structured, justified, risk-aware"
+        }
     }
 }
