@@ -1,0 +1,86 @@
+[
+    {
+        "id": "b1",
+        "category": "behavioral",
+        "levels": ["junior", "mid", "senior"],
+        "question": "Tell me about a time you delivered a project under a tight deadline. What did you do and what was the result?",
+        "skills": ["time management", "prioritization"]
+    },
+    {
+        "id": "b2",
+        "category": "behavioral",
+        "levels": ["junior", "mid"],
+        "question": "Describe a disagreement with a teammate about a technical decision. How did you resolve it?",
+        "skills": ["collaboration", "communication"]
+    },
+    {
+        "id": "b3",
+        "category": "behavioral",
+        "levels": ["mid", "senior"],
+        "question": "Tell me about a time you improved a process or system. What was the measurable impact?",
+        "skills": ["ownership", "impact"]
+    },
+    {
+        "id": "b4",
+        "category": "behavioral",
+        "levels": ["senior"],
+        "question": "Describe a time you led a team through a difficult technical change. What did you learn?",
+        "skills": ["leadership", "change management"]
+    },
+    {
+        "id": "t1",
+        "category": "technical",
+        "levels": ["junior", "mid", "senior"],
+        "question": "Explain how you would design a REST API for a service that manages user accounts.",
+        "skills": ["api design", "security"]
+    },
+    {
+        "id": "t2",
+        "category": "technical",
+        "levels": ["junior", "mid"],
+        "question": "How do you debug a production issue where API response time suddenly increases?",
+        "skills": ["debugging", "observability"]
+    },
+    {
+        "id": "t3",
+        "category": "technical",
+        "levels": ["mid", "senior"],
+        "question": "How would you design retry and error handling for calls to an unreliable external service?",
+        "skills": ["resilience", "distributed systems"]
+    },
+    {
+        "id": "t4",
+        "category": "technical",
+        "levels": ["senior"],
+        "question": "Describe how you would architect a multi-agent LLM application, including tool use, memory, and guardrails.",
+        "skills": ["system design", "llm applications"]
+    },
+    {
+        "id": "s1",
+        "category": "situational",
+        "levels": ["junior", "mid", "senior"],
+        "question": "You find a serious bug in production right before a release. What do you do?",
+        "skills": ["judgment", "incident response"]
+    },
+    {
+        "id": "s2",
+        "category": "situational",
+        "levels": ["junior", "mid"],
+        "question": "A stakeholder asks for a feature that conflicts with your timeline. How do you respond?",
+        "skills": ["stakeholder management", "prioritization"]
+    },
+    {
+        "id": "s3",
+        "category": "situational",
+        "levels": ["mid", "senior"],
+        "question": "Your team must choose between shipping fast and refactoring risky code. How do you decide?",
+        "skills": ["tradeoffs", "risk management"]
+    },
+    {
+        "id": "s4",
+        "category": "situational",
+        "levels": ["senior"],
+        "question": "You inherit a system with no documentation and frequent outages. What are your first 30 days?",
+        "skills": ["planning", "reliability"]
+    }
+]
