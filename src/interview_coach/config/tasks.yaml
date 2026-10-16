@@ -52,10 +52,17 @@ evaluate_answer:
         Confirmed answer: {answer}
 
         Call get_scoring_rubric and get_delivery_guidelines for this question type. Score
-        every rubric dimension from 1 to 5. For each score, include a short evidence note
-        pointing to a specific statement or omission in the answer, and one suggestion.
-        List strengths, gaps, and improvements. Do not judge accent, personality, or
-        hiring suitability.
+        every rubric dimension from 1 to 5, using exactly the dimension names returned by
+        the rubric. For each score, write an evidence note of at least 4 words that points
+        to a specific statement or omission in the answer, and one suggestion.
+        List strengths, gaps, and improvements.
+
+        Also write improved_answer (60 to 200 words): a stronger version of the answer that
+        uses only facts stated in the confirmed answer. Do not add companies, tools,
+        numbers, or outcomes that are not in the answer. Where a detail is missing, write a
+        placeholder such as [add your measurable result].
+
+        Do not judge accent, personality, or hiring suitability.
     expected_output: >
         JSON matching the AnswerEvaluation schema.
     agent: evaluation_coach
