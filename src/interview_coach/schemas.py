@@ -67,6 +67,7 @@ class AnswerEvaluation(BaseModel):
     strengths: list[str]
     gaps: list[str]
     improvements: list[str]
+    improved_answer: str = ""
     filler_word_count: int = Field(default=0, ge=0)
     disclaimer: str = DISCLAIMER
 
@@ -89,3 +90,34 @@ def weighted_overall(scores: list[DimensionScore], weights: dict[str, float]) ->
         raise ValueError("No scores match rubric dimensions")
     weighted = sum(mul(s.score, weights.get(s.name, 0.0)) for s in scores)
     return round(weighted / total_weight, 2)
+
+class MCQQuestion(BaseModel):
+    id: str
+    question: str
+    options: list[str] = Field(min_length=4, max_length=4)
+    correct_index: int = Field(ge=0, le=3)
+    skill: str
+    explanation: str
+
+
+class MCQSet(BaseModel):
+    questions: list[MCQQuestion] = Field(min_length=3, max_length=10)
+
+
+class CaseResult(BaseModel):
+    index: int
+    visible: bool
+    passed: bool
+    error: str | None = None
+
+
+class CodeEvaluation(BaseModel):
+    problem_id: str
+    tests_passed: int = Field(ge=0)
+    tests_total: int = Field(ge=1)
+    correctness_score: int = Field(ge=1, le=5)
+    quality_score: int = Field(ge=1, le=5)
+    complexity_notes: str
+    feedback: list[str]
+    improved_solution: str
+    disclaimer: str = DISCLAIMER

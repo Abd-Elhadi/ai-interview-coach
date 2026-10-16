@@ -1,0 +1,19 @@
+Jordan Lee
+Backend Engineer
+
+Summary: Backend engineer with 4 years of experience building Python APIs and cloud services.
+
+Experience
+Software Engineer, BrightPay (2022 to present)
+- Built FastAPI services handling payment webhooks for 40 merchants.
+- Reduced average API latency from 420 ms to 180 ms by adding Redis caching.
+- Deployed services to AWS ECS with GitHub Actions and Terraform.
+
+Junior Developer, CloudNest (2020 to 2022)
+- Wrote PostgreSQL queries and REST endpoints for an inventory app.
+- Added unit tests that raised coverage from 35 percent to 70 percent.
+
+Projects
+- Expense tracker with microservices, Docker, and PostgreSQL.
+
+Skills: Python, FastAPI, PostgreSQL, Redis, Docker, AWS, Terraform, REST
