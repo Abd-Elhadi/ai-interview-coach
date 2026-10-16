@@ -53,6 +53,11 @@ Tool: enum validation, path restriction.
 
 Transcript confirm/edit, final report approve/edit/reject.
 
+## Features
+
+- Done: job and resume analysis, MCP question bank and rubric, scoring, improved answers, report approval and download.
+- In progress: coding session, speech in and out, email report, login, MCQs.
+
 ## Setup
 
 ```bash
