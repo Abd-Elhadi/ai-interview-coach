@@ -1,0 +1,16 @@
+Backend Engineer, Mid Level
+
+We are hiring a backend engineer to build and operate APIs for our logistics platform.
+
+Responsibilities
+- Design and build REST APIs in Python.
+- Own services in production, including monitoring and incident response.
+- Work with PostgreSQL and caching layers.
+- Deploy on AWS using containers and infrastructure as code.
+
+Requirements
+- 3+ years of backend experience with Python.
+- Experience with PostgreSQL, Docker, and AWS.
+- Strong communication and teamwork.
+
+Nice to have: Terraform, Redis, CI/CD experience.
