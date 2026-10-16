@@ -49,6 +49,10 @@ Input: file type/size, PII warning, prompt-injection filter.
 Output: Pydantic schema, feedback must cite the answer.
 Tool: enum validation, path restriction.
 
+## Architecture
+
+![AI-Intervew-Coach](assets/interview_coach_architecture_status.svg)
+
 ## HITL
 
 Transcript confirm/edit, final report approve/edit/reject.
