@@ -27,6 +27,13 @@ class InterviewSession:
     warnings: list[str] = field(default_factory=list)
     evaluations: list[AnswerEvaluation] = field(default_factory=list)
 
+def _history(session: InterviewSession) -> str:
+    if not session.evaluations:
+        return "None yet."
+    return "\n".join(
+        f"- {e.question_type}: score {e.overall_score:.1f}; gaps: {'; '.join(e.gaps[:2])}"
+        for e in session.evaluations
+    )
 
 def _model(output, cls):
     model = getattr(output, "pydantic", None)
@@ -59,6 +66,7 @@ def evaluate_answer(session: InterviewSession, idx: int, answer_raw: str) -> Ans
             "question_type": question.category,
             "question": question.question,
             "answer": answer.text,
+            "history": _history(session),
         }
     )
     ev = _model(result, AnswerEvaluation)

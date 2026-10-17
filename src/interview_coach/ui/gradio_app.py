@@ -7,8 +7,8 @@ import gradio as gr
 from interview_coach import pipeline, reporting
 from interview_coach.ui import backend
 from interview_coach.ui.coding_tab import build_coding_tab
-from interview_coach.ui.quiz_tab import build_quiz_tab
 from mcp_server.server import AUDIO_DIR, synthesize_question, transcribe_answer
+from interview_coach.ui.quiz_tab import build as build_quiz_tab
 
 
 def _cell(text) -> str:
@@ -160,9 +160,9 @@ def reject(state):
 def build_app() -> gr.Blocks:
     with gr.Blocks(title="AI Interview Coach") as demo:
         gr.Markdown("# AI Interview Coach\nPractice coaching only. Scores are estimates, not hiring decisions.")
+        state = gr.State({})
         with gr.Tabs():
             with gr.Tab("Interview"):
-                state = gr.State({})
                 with gr.Row():
                     resume = gr.File(label="Resume (.pdf or .txt)", file_types=[".pdf", ".txt"], type="filepath")
                     job = gr.Textbox(label="Job description", lines=10)
@@ -202,7 +202,7 @@ def build_app() -> gr.Blocks:
                 reject_btn.click(reject, [state], [state, final_md, download])
 
             with gr.Tab("Quiz"):
-                build_quiz_tab()
+                build_quiz_tab(state)
 
             with gr.Tab("Coding"):
                 build_coding_tab()

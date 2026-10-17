@@ -51,16 +51,21 @@ evaluate_answer:
         Question: {question}
         Confirmed answer: {answer}
 
+        Earlier answers in this session:
+        {history}
+
         Call get_scoring_rubric and get_delivery_guidelines for this question type. Score
         every rubric dimension from 1 to 5, using exactly the dimension names returned by
         the rubric. For each score, write an evidence note of at least 4 words that points
-        to a specific statement or omission in the answer, and one suggestion.
+        to a specific statement or omission in the answer, and one suggestion. If a gap
+        repeats from earlier answers, say so and give a different, more specific tip.
         List strengths, gaps, and improvements.
 
         Also write improved_answer (60 to 200 words): a stronger version of the answer that
-        uses only facts stated in the confirmed answer. Do not add companies, tools,
-        numbers, or outcomes that are not in the answer. Where a detail is missing, write a
-        placeholder such as [add your measurable result].
+        uses only facts stated in the confirmed answer. Keep every number and metric that
+        appears in the answer exactly as written, for example 180 ms. Use a placeholder such
+        as [add your measurable result] only for details the answer does not contain. Do not
+        add companies, tools, numbers, or outcomes that are not in the answer.
 
         Do not judge accent, personality, or hiring suitability.
     expected_output: >
