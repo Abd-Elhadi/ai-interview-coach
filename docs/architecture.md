@@ -10,7 +10,11 @@ flowchart TD
   RA --> PL
   PL -->|get_interview_questions| MCP[(Custom MCP server)]
   PL --> UI
-  UI -->|confirmed answer| EC[Evaluation crew]
+  UI -->|synthesize_question| MCP
+  UI -->|record one answer| TR[transcribe_answer]
+  TR --> MCP
+  MCP --> CONF[Edit and confirm transcript]
+  CONF -->|confirmed text| EC[Evaluation crew]
   EC -->|get_scoring_rubric, get_delivery_guidelines| MCP
   EC --> OG[Output guardrails and weighted score]
   OG --> UI
@@ -23,8 +27,8 @@ flowchart TD
 
 - Input: length limits, injection-line removal, email/phone/ID redaction.
 - Output: plan order, rubric dimension match, evidence notes, no invented numbers.
-- Tool: per-agent MCP tool allowlist, server-side enums, resume path guard, code runner sandbox.
+- Tool: per-agent MCP tool allowlist, server-side enums, resume path guard, audio path guard, code runner sandbox.
 
-## Planned
+## Not done
 
-Coding session, speech in and out, email report, sign up and login, MCQs.
+Quiz, coding, login, email.
