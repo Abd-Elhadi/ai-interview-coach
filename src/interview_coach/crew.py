@@ -3,6 +3,7 @@ import os
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
+from interview_coach.knowledge import coach_knowledge
 from interview_coach.guardrails import output_guards
 from interview_coach.guardrails.tool_guards import mcp_for
 from interview_coach.schemas import (
@@ -114,6 +115,7 @@ class EvaluationCrew:
             config=self.agents_config["evaluation_coach"],
             llm=MODEL,
             mcps=[mcp_for("evaluation_coach")],
+            knowledge_sources=coach_knowledge(),
         )
 
     @task
