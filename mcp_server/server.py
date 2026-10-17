@@ -1,10 +1,15 @@
 import json
+import os
+import uuid
 from pathlib import Path
 from typing import Literal
+
 from mcp.server.fastmcp import FastMCP
+from openai import OpenAI
 
 DATA = Path(__file__).parent / "data"
 RESUME_DIR = Path("tmp/uploads").resolve()
+AUDIO_DIR = Path("tmp/audio").resolve()
 mcp = FastMCP("interview-coach")
 
 QType = Literal["behavioral", "technical", "situational"]
@@ -39,6 +44,41 @@ def read_resume(filename: str) -> str:
     if RESUME_DIR not in path.parents or path.suffix not in {".txt", ".pdf"}:
         raise ValueError("Invalid resume path")
     return path.read_text(errors="ignore")
+
+
+@mcp.tool()
+def transcribe_answer(filename: str) -> str:
+    """Transcribe one audio answer from the restricted audio directory."""
+    path = (AUDIO_DIR / Path(filename).name).resolve()
+    if AUDIO_DIR not in path.parents or path.suffix not in {".wav", ".webm", ".mp3"}:
+        raise ValueError("Invalid audio path")
+    client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+    with path.open("rb") as audio:
+        transcript = client.audio.transcriptions.create(
+            model="gpt-4o-mini-transcribe",
+            file=audio,
+        )
+    return transcript.text
+
+
+@mcp.tool()
+def synthesize_question(text: str) -> str:
+    """Speak a question with TTS and save the mp3 in the audio directory."""
+    filename = f"{uuid.uuid4().hex}.mp3"
+    path = (AUDIO_DIR / Path(filename).name).resolve()
+    if AUDIO_DIR not in path.parents or path.suffix not in {".mp3"}:
+        raise ValueError("Invalid audio path")
+    AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+    client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+    speech = client.audio.speech.create(
+        model="gpt-4o-mini-tts",
+        voice="alloy",
+        input=text,
+        response_format="mp3",
+    )
+    speech.write_to_file(path)
+    return filename
+
 
 def _problems() -> list[dict]:
     return _load("coding_problems.json")
