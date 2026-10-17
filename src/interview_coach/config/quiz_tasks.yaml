@@ -1,0 +1,12 @@
+generate_mcqs:
+    description: >
+        Job profile (JSON): {job_profile_json}
+        Seniority: {seniority}
+
+        Write {count} multiple-choice questions on the required skills and responsibilities.
+        Each question has exactly 4 distinct options, one correct answer, a skill name taken
+        from the profile, and an explanation of 1 to 2 sentences. Vary the position of the
+        correct answer (correct_index from 0 to 3). Match the difficulty to the seniority.
+    expected_output: >
+        JSON matching the MCQSet schema.
+    agent: quiz_writer
