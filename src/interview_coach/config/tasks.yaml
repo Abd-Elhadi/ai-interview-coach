@@ -71,7 +71,6 @@ evaluate_answer:
     expected_output: >
         JSON matching the AnswerEvaluation schema.
     agent: evaluation_coach
-
 write_final_report:
     description: >
         Combine these per-question evaluations into one report:
@@ -82,3 +81,4 @@ write_final_report:
     expected_output: >
         JSON matching the FinalReport schema.
     agent: evaluation_coach
+

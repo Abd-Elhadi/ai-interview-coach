@@ -8,6 +8,7 @@ from interview_coach.guardrails import output_guards
 from interview_coach.guardrails.tool_guards import mcp_for
 from interview_coach.schemas import (
     AnswerEvaluation,
+    CodeEvaluation,
     FinalReport,
     InterviewPlan,
     JobProfile,
@@ -217,5 +218,34 @@ class ReportCrew:
         return Crew(
             agents=[self.evaluation_coach()],
             tasks=[self.write_final_report()],
+            process=Process.sequential,
+        )
+
+
+@CrewBase
+class CodeReviewCrew:
+    """Reviews a coding solution after deterministic sandbox execution."""
+
+    agents_config = "config/coding_agents.yaml"
+    tasks_config = "config/coding_tasks.yaml"
+
+    @agent
+    def code_reviewer(self) -> Agent:
+        return Agent(config=self.agents_config["code_reviewer"], llm=MODEL)
+
+    @task
+    def review_code(self) -> Task:
+        return Task(
+            config=self.tasks_config["review_code"],
+            output_pydantic=CodeEvaluation,
+            guardrail=output_guards.valid_code_evaluation,
+            guardrail_max_retries=2,
+        )
+
+    @crew
+    def crew(self) -> Crew:
+        return Crew(
+            agents=[self.code_reviewer()],
+            tasks=[self.review_code()],
             process=Process.sequential,
         )

@@ -4,7 +4,7 @@ from typing import Any, Tuple
 from crewai import TaskOutput
 
 from interview_coach.rubrics import dimension_names
-from interview_coach.schemas import AnswerEvaluation, FinalReport, InterviewPlan
+from interview_coach.schemas import AnswerEvaluation, CodeEvaluation, FinalReport, InterviewPlan
 
 NUMBER = re.compile(r"\d+(?:[.,]\d+)?%?")
 EXPECTED_ORDER = ["behavioral", "technical", "situational"]
@@ -53,6 +53,17 @@ def valid_report(result: TaskOutput) -> Tuple[bool, Any]:
         return False, "Output must be valid FinalReport JSON."
     if not (report.action_plan and report.top_strengths and report.top_gaps):
         return False, "Report needs strengths, gaps, and an action plan."
+    return True, result.raw
+
+
+def valid_code_evaluation(result: TaskOutput) -> Tuple[bool, Any]:
+    evaluation = _model(result, CodeEvaluation)
+    if evaluation is None:
+        return False, "Output must be valid CodeEvaluation JSON."
+    if evaluation.tests_passed > evaluation.tests_total:
+        return False, "tests_passed cannot exceed tests_total."
+    if not evaluation.feedback:
+        return False, "Provide at least one concrete code-review feedback item."
     return True, result.raw
 
 
