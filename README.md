@@ -65,7 +65,9 @@ Edit and confirm each transcript before it is scored. Edit, approve, or reject t
 ## Features
 
 - Done: job and resume analysis, MCP question bank and rubric, question audio via synthesize_question, record one answer, transcribe with transcribe_answer, edit and confirm the transcript, score that text, improved answers, report approval and download.
-- Not done: quiz tab, coding tab, login, email.
+- Done: coding session with Python, JavaScript, and C# execution at easy, medium, and hard levels.
+- Done: knowledge quiz.
+- Not done: login, email.
 
 ## Setup
 

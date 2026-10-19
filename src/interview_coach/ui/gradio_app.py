@@ -5,10 +5,46 @@ from pathlib import Path
 import gradio as gr
 
 from interview_coach import pipeline, reporting
+from interview_coach.ui import coding_tab
 from interview_coach.ui import backend
-from interview_coach.ui.coding_tab import build_coding_tab
 from mcp_server.server import AUDIO_DIR, synthesize_question, transcribe_answer
 from interview_coach.ui.quiz_tab import build as build_quiz_tab
+
+LOADER_CSS = """
+
+.coach-loader {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0;
+    padding: 10px 14px;
+    border: 1px solid #c8d6e5;
+    border-radius: 10px;
+    background: #f4f8fb;
+    color: #24445c;
+    font-size: 0.95rem;
+}
+.coach-loader-dot {
+    width: 14px;
+    height: 14px;
+    border: 2px solid #b7c8d8;
+    border-top-color: #2878a8;
+    border-radius: 50%;
+    animation: coach-spin 0.8s linear infinite;
+}
+@keyframes coach-spin { to { transform: rotate(360deg); } }
+"""
+
+
+def _loading(text: str):
+    return gr.update(
+        value=f'<div class="coach-loader"><span class="coach-loader-dot"></span><span>{text}</span></div>',
+        visible=True,
+    )
+
+
+def _loaded():
+    return gr.update(value="", visible=False)
 
 
 def _cell(text) -> str:
@@ -159,6 +195,7 @@ def reject(state):
 
 def build_app() -> gr.Blocks:
     with gr.Blocks(title="AI Interview Coach") as demo:
+        gr.HTML(f"<style>{LOADER_CSS}</style>")
         gr.Markdown("# AI Interview Coach\nPractice coaching only. Scores are estimates, not hiring decisions.")
         state = gr.State({})
         with gr.Tabs():
@@ -205,5 +242,5 @@ def build_app() -> gr.Blocks:
                 build_quiz_tab(state)
 
             with gr.Tab("Coding"):
-                build_coding_tab()
+                coding_tab.build()
     return demo
