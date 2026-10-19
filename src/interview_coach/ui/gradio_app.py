@@ -1,7 +1,44 @@
 import gradio as gr
 
 from interview_coach import pipeline, reporting
+from interview_coach.ui import coding_tab
 from interview_coach.ui import backend
+
+LOADER_CSS = """
+
+.coach-loader {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0;
+    padding: 10px 14px;
+    border: 1px solid #c8d6e5;
+    border-radius: 10px;
+    background: #f4f8fb;
+    color: #24445c;
+    font-size: 0.95rem;
+}
+.coach-loader-dot {
+    width: 14px;
+    height: 14px;
+    border: 2px solid #b7c8d8;
+    border-top-color: #2878a8;
+    border-radius: 50%;
+    animation: coach-spin 0.8s linear infinite;
+}
+@keyframes coach-spin { to { transform: rotate(360deg); } }
+"""
+
+
+def _loading(text: str):
+    return gr.update(
+        value=f'<div class="coach-loader"><span class="coach-loader-dot"></span><span>{text}</span></div>',
+        visible=True,
+    )
+
+
+def _loaded():
+    return gr.update(value="", visible=False)
 
 
 def _cell(text) -> str:
@@ -49,6 +86,8 @@ def start(resume_path, job_text, state):
         "",
         gr.update(value=None, visible=False),
         notes_md,
+        gr.update(visible=True),
+        _loaded(),
     )
 
 
@@ -68,12 +107,12 @@ def submit(answer, state):
         raise gr.Error(f"Evaluation failed: {err}")
     state["idx"] += 1
     if state["idx"] < len(session.plan.questions):
-        return state, _question_md(session, state["idx"]), "", _feedback_md(ev), gr.update(visible=False), ""
+        return state, _question_md(session, state["idx"]), "", _feedback_md(ev), gr.update(visible=False), "", _loaded()
     try:
         draft = reporting.report_to_markdown(pipeline.build_report(session))
     except Exception as err:
         raise gr.Error(f"Report generation failed: {err}")
-    return state, "### Interview complete", "", _feedback_md(ev), gr.update(visible=True), draft
+    return state, "### Interview complete", "", _feedback_md(ev), gr.update(visible=True), draft, _loaded()
 
 
 def approve(draft_text, state):
@@ -94,6 +133,7 @@ def reject(state):
 
 def build_app() -> gr.Blocks:
     with gr.Blocks(title="AI Interview Coach") as demo:
+        gr.HTML(f"<style>{LOADER_CSS}</style>")
         gr.Markdown("# AI Interview Coach\nPractice coaching only. Scores are estimates, not hiring decisions.")
         state = gr.State({})
         with gr.Row():
@@ -117,15 +157,30 @@ def build_app() -> gr.Blocks:
             final_md = gr.Markdown()
             download = gr.File(label="Download report", interactive=False, visible=False)
 
+        loading = gr.HTML(visible=False)
+
+        with gr.Tab("Coding session", visible=False) as coding_col:
+            coding_tab.build()
+
         start_btn.click(
+            lambda: _loading(
+                "Reading your resume...<br>"
+                "Analyzing the job description...<br>"
+                "Building your personalized interview plan..."
+            ),
+            outputs=loading,
+        ).then(
             start,
             [resume, job, state],
-            [state, question_md, interview_col, feedback_md, report_col, final_md, download, notes_md],
+            [state, question_md, interview_col, feedback_md, report_col, final_md, download, notes_md, coding_col, loading],
         )
         submit_btn.click(
+            lambda: _loading("Reviewing your answer..."),
+            outputs=loading,
+        ).then(
             submit,
             [answer, state],
-            [state, question_md, answer, feedback_md, report_col, draft],
+            [state, question_md, answer, feedback_md, report_col, draft, loading],
         )
         approve_btn.click(approve, [draft, state], [state, final_md, download])
         reject_btn.click(reject, [state], [state, final_md, download])

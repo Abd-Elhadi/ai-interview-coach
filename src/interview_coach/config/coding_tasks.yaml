@@ -1,0 +1,19 @@
+review_code:
+    description: >
+        Problem:
+        {problem_json}
+
+        Candidate solution:
+        {code}
+
+        Deterministic sandbox test results:
+        {test_results_json}
+
+        Review the submitted solution. Use the test results as the source of truth for
+        correctness, score correctness from 1 to 5, score code quality from 1 to 5,
+        explain time and space complexity, and list concise actionable feedback.
+        Provide improved_solution only when it is useful. Keep the exact function name
+        and signature from the problem, and do not invent requirements or test outcomes.
+    expected_output: >
+        JSON matching the CodeEvaluation schema.
+    agent: code_reviewer

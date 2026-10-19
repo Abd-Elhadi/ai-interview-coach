@@ -116,6 +116,8 @@ class CodeEvaluation(BaseModel):
     tests_passed: int = Field(ge=0)
     tests_total: int = Field(ge=1)
     correctness_score: int = Field(ge=1, le=5)
+    suggested_tests_passed: int = Field(default=0, ge=0)
+    suggested_tests_total: int = Field(default=0, ge=0)
     quality_score: int = Field(ge=1, le=5)
     complexity_notes: str
     feedback: list[str]

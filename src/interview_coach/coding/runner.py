@@ -14,11 +14,15 @@ from pathlib import Path
 DATA = Path(__file__).resolve().parents[3] / "mcp_server" / "data" / "coding_problems.json"
 TIMEOUT_SECONDS = 5
 MAX_CODE_CHARS = 8000
+LANGUAGES = {"python", "javascript", "csharp"}
 FORBIDDEN_IMPORTS = {
     "os", "sys", "subprocess", "socket", "shutil", "pathlib", "requests", "urllib", "http",
     "ctypes", "importlib", "builtins", "pickle", "multiprocessing", "threading", "signal",
 }
-FORBIDDEN_CALLS = {"open", "exec", "eval", "compile", "__import__", "input", "breakpoint"}
+FORBIDDEN_CALLS = {
+    "open", "exec", "eval", "compile", "__import__", "input", "breakpoint",
+    "globals", "locals", "vars", "getattr", "setattr", "delattr", "dir", "help",
+}
 
 HARNESS = """
 import contextlib, io, json, sys
@@ -47,12 +51,42 @@ for case in cases:
 print(json.dumps({"results": results}))
 """
 
+JS_FUNCTIONS = {"c1": "twoSum", "c2": "isValidParentheses", "c3": "mergeIntervals", "c4": "topKFrequent"}
+CSHARP_FUNCTIONS = {"c1": "TwoSum", "c2": "IsValidParentheses", "c3": "MergeIntervals", "c4": "TopKFrequent"}
+JS_BLOCKED = ("require(", "process.", "child_process", "fs.", "eval(", "Function(")
+CSHARP_BLOCKED = ("System.Diagnostics", "System.IO", "Process.", "File.", "Directory.", "HttpClient")
+
+
+def starter_code(problem_id: str, language: str) -> str:
+    if language == "python":
+        return load_problem(problem_id)["starter_code"]
+    if language == "javascript":
+        name = JS_FUNCTIONS[problem_id]
+        return f"function {name}() {{\n    // implement the solution\n}}\n\nmodule.exports = {{ {name} }};\n"
+    if language == "csharp":
+        signatures = {
+            "c1": "int[] TwoSum(int[] nums, int target)",
+            "c2": "bool IsValidParentheses(string s)",
+            "c3": "int[][] MergeIntervals(int[][] intervals)",
+            "c4": "int[] TopKFrequent(int[] nums, int k)",
+        }
+        return (
+            "using System;\nusing System.Collections.Generic;\n\n"
+            "public static class Solution\n{\n"
+            f"    public static {signatures[problem_id]}\n    {{\n        throw new NotImplementedException();\n    }}\n}}\n"
+        )
+    raise ValueError(f"Unsupported language: {language}")
+
 
 def load_problem(problem_id: str) -> dict:
-    for problem in json.loads(DATA.read_text()):
+    for problem in load_all_problems():
         if problem["id"] == problem_id:
             return problem
     raise ValueError("Unknown problem id")
+
+
+def load_all_problems() -> list[dict]:
+    return json.loads(DATA.read_text())
 
 
 def validate_code(code: str) -> str | None:
@@ -78,8 +112,19 @@ def validate_code(code: str) -> str | None:
     return None
 
 
+def _validate_language_code(code: str, language: str) -> str | None:
+    if language == "python":
+        return validate_code(code)
+    blocked = JS_BLOCKED if language == "javascript" else CSHARP_BLOCKED
+    match = next((token for token in blocked if token in code), None)
+    return f"Code contains a blocked operation: {match}" if match else None
+
+
 def _safe_env() -> dict:
-    keep = ("PATH", "SYSTEMROOT", "TEMP", "TMP")
+    keep = (
+        "PATH", "SYSTEMROOT", "TEMP", "TMP", "HOME", "USERPROFILE", "LOCALAPPDATA", "APPDATA",
+        "DOTNET_ROOT", "DOTNET_CLI_HOME",
+    )
     return {key: os.environ[key] for key in keep if key in os.environ}
 
 
@@ -94,39 +139,142 @@ def _failed(tests: list, message: str) -> dict:
     return {"passed": 0, "total": len(tests), "error": message, "results": []}
 
 
-def run_tests(code: str, problem_id: str) -> dict:
+def _run_json_process(
+    command: list[str], cwd: str, use_dotnet_environment: bool = False, timeout_seconds: int = TIMEOUT_SECONDS
+) -> dict:
+    env = os.environ.copy() if use_dotnet_environment else _safe_env()
+    if use_dotnet_environment:
+        for key in list(env):
+            if any(secret in key.upper() for secret in ("KEY", "TOKEN", "SECRET", "PASSWORD", "CREDENTIAL")):
+                env.pop(key, None)
+    if "NUGET_PACKAGES" not in env:
+        env["NUGET_PACKAGES"] = str(Path.home() / ".nuget" / "packages")
+    try:
+        proc = subprocess.run(
+            command,
+            cwd=cwd,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+            preexec_fn=_limits if os.name == "posix" else None,
+        )
+    except FileNotFoundError as err:
+        return {"error": f"Required runtime is unavailable: {err.filename}"}
+    except subprocess.TimeoutExpired:
+        return {"error": f"Time limit of {timeout_seconds} seconds exceeded."}
+    try:
+        return json.loads(proc.stdout.strip().splitlines()[-1])
+    except (IndexError, ValueError):
+        diagnostic = "\n".join(part for part in (proc.stderr.strip(), proc.stdout.strip()) if part)
+        detail = " ".join(diagnostic.splitlines()[-4:]) if diagnostic else ""
+        return {"error": f"Program crashed or produced no result.{(' ' + detail[:300]) if detail else ''}"}
+
+
+def _run_python(code: str, problem: dict, tmp: str) -> dict:
+    base = Path(tmp)
+    (base / "harness.py").write_text(HARNESS)
+    (base / "solution.py").write_text(code)
+    (base / "cases.json").write_text(json.dumps(problem["tests"]))
+    return _run_json_process(
+        [sys.executable, "-I", "harness.py", "solution.py", problem["function_name"], "cases.json"],
+        tmp,
+    )
+
+
+def _run_javascript(code: str, problem: dict, tmp: str) -> dict:
+    base = Path(tmp)
+    harness = """
+const solution = require('./solution.js');
+const cases = require('./cases.json');
+const fn = solution[process.argv[2]];
+if (typeof fn !== 'function') { console.log(JSON.stringify({fatal: 'Function was not exported.'})); process.exit(0); }
+const results = [];
+for (const test of cases) {
+  try {
+    const got = fn(...test.args);
+    results.push({passed: JSON.stringify(got) === JSON.stringify(test.expected), got});
+  } catch (err) { results.push({passed: false, error: `${err.name}: ${String(err.message).slice(0, 200)}`}); }
+}
+console.log(JSON.stringify({results}));
+"""
+    (base / "harness.js").write_text(harness)
+    (base / "solution.js").write_text(code)
+    (base / "cases.json").write_text(json.dumps(problem["tests"]))
+    return _run_json_process(["node", "harness.js", JS_FUNCTIONS[problem["id"]]], tmp)
+
+
+def _csharp_case(problem_id: str, args: list) -> tuple[str, str]:
+    if problem_id == "c1":
+        call = f"Solution.TwoSum(new[] {{{','.join(map(str, args[0]))}}}, {args[1]})"
+    elif problem_id == "c2":
+        call = f"Solution.IsValidParentheses({json.dumps(args[0])})"
+    elif problem_id == "c3":
+        intervals = ",".join("new[] {" + ",".join(map(str, pair)) + "}" for pair in args[0])
+        call = f"Solution.MergeIntervals(new[] {{{intervals}}})"
+    else:
+        call = f"Solution.TopKFrequent(new[] {{{','.join(map(str, args[0]))}}}, {args[1]})"
+    return call, json.dumps(args)
+
+
+def _run_csharp(code: str, problem: dict, tmp: str) -> dict:
+    base = Path(tmp)
+    checks = []
+    for test in problem["tests"]:
+        call, _ = _csharp_case(problem["id"], test["args"])
+        expected = json.dumps(test["expected"], separators=(",", ":")).replace('"', '\\"')
+        checks.append(
+            f"try {{ var got = System.Text.Json.JsonSerializer.Serialize({call}); "
+            f"results.Add(new {{ passed = got == \"{expected}\" }}); }} "
+            "catch (Exception err) { results.Add(new { passed = false, error = err.GetType().Name + \": \" + err.Message }); }"
+        )
+    harness = """
+public static class Harness
+{
+    public static void Main()
+    {
+        var results = new List<object>();
+        CHECKS
+        Console.WriteLine(JsonSerializer.Serialize(new { results }));
+    }
+}
+""".replace("CHECKS", "\n        ".join(checks))
+    header = "using System;\nusing System.Collections.Generic;\nusing System.Text.Json;\n"
+    (base / "Program.cs").write_text(header + code + "\n" + harness)
+    (base / "Coding.csproj").write_text(
+        "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup>"
+        "<OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework>"
+        "<ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>"
+        "</PropertyGroup></Project>"
+    )
+    return _run_json_process(
+        ["dotnet", "run", "--project", "Coding.csproj", "--nologo"],
+        tmp,
+        use_dotnet_environment=True,
+        timeout_seconds=30,
+    )
+
+
+def run_tests(code: str, problem_id: str, language: str = "python") -> dict:
+    if language not in LANGUAGES:
+        raise ValueError(f"Unsupported language: {language}")
     problem = load_problem(problem_id)
     tests = problem["tests"]
     if len(code) > MAX_CODE_CHARS:
         return _failed(tests, "Code exceeds the size limit.")
-    problem_error = validate_code(code)
+    problem_error = _validate_language_code(code, language)
     if problem_error:
         return _failed(tests, problem_error)
 
     with tempfile.TemporaryDirectory() as tmp:
-        base = Path(tmp)
-        (base / "harness.py").write_text(HARNESS)
-        (base / "solution.py").write_text(code)
-        (base / "cases.json").write_text(json.dumps(tests))
-        try:
-            proc = subprocess.run(
-                [sys.executable, "-I", "harness.py", "solution.py", problem["function_name"], "cases.json"],
-                cwd=tmp,
-                env=_safe_env(),
-                capture_output=True,
-                text=True,
-                timeout=TIMEOUT_SECONDS,
-                preexec_fn=_limits if os.name == "posix" else None,
-            )
-        except subprocess.TimeoutExpired:
-            return _failed(tests, f"Time limit of {TIMEOUT_SECONDS} seconds exceeded.")
-
-    try:
-        payload = json.loads(proc.stdout.strip().splitlines()[-1])
-    except (IndexError, ValueError):
-        return _failed(tests, "Program crashed or produced no result.")
+        runners = {"python": _run_python, "javascript": _run_javascript, "csharp": _run_csharp}
+        payload = runners[language](code, problem, tmp)
+    if "error" in payload and "results" not in payload:
+        return _failed(tests, payload["error"])
     if "fatal" in payload:
         return _failed(tests, payload["fatal"])
+    if len(payload.get("results", [])) != len(tests):
+        return _failed(tests, "Test harness returned an incomplete result.")
 
     results = []
     for index, (test, outcome) in enumerate(zip(tests, payload["results"])):
