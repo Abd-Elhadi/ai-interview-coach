@@ -5,10 +5,12 @@
 1. UI (gradio_app.py) loads the resume and calls pipeline.start_session.
 2. input_guards.check_text cleans the text. PlanningCrew runs 3 tasks in sequence.
 3. interview_planner calls the MCP tool get_interview_questions over stdio.
-4. The user answers. pipeline.evaluate_answer runs EvaluationCrew.
-5. evaluation_coach calls MCP get_scoring_rubric and get_delivery_guidelines.
-6. Python recomputes the weighted score and checks the improved answer for invented numbers.
-7. After 3 answers, ReportCrew writes the narrative. The user edits, approves, downloads.
+4. The UI speaks the question by calling the MCP tool synthesize_question.
+5. The user records one answer. Transcribe calls the MCP tool transcribe_answer.
+6. The user edits and confirms the transcript. pipeline.evaluate_answer scores that text with EvaluationCrew.
+7. evaluation_coach calls MCP get_scoring_rubric and get_delivery_guidelines.
+8. Python recomputes the weighted score and checks the improved answer for invented numbers.
+9. After 3 answers, ReportCrew writes the narrative. The user edits, approves, downloads.
 
 ## File map
 
@@ -19,9 +21,9 @@
 | crew.py                        | 3 crews, MCP attached per agent, guardrails attached per task |
 | pipeline.py                    | Orchestration and deterministic post-processing               |
 | guardrails/                    | Input cleaning, output validators, MCP tool allowlist         |
-| mcp_server/server.py           | Question bank, rubric, delivery, coding tools                 |
+| mcp_server/server.py           | Question bank, rubric, delivery, speech, coding tools         |
 | coding/runner.py               | Sandboxed test execution                                      |
-| ui/gradio_app.py               | HITL gate, report download                                    |
+| ui/gradio_app.py               | Question audio, record, transcribe, transcript confirm, report download |
 
 ## Questions to be ready for
 
@@ -31,7 +33,7 @@
 4. How does an agent call MCP? mcps=[MCPServerStdio(...)], a local subprocess over stdio.
 5. How do you limit MCP tools? tool_filter allowlist per agent plus server enums.
 6. What happens when a guardrail fails? The error goes back to the agent and it retries up to 2 times.
-7. Where is HITL? Report edit, approve, reject in the UI. Transcript confirm comes with speech.
+7. Where is HITL? Edit and confirm the transcript before scoring. Then edit, approve, or reject the report.
 8. How do you stop invented claims in improved answers? Placeholders in the prompt and a number check in code.
 9. How is candidate code run safely? AST screening, isolated interpreter, empty env, timeout. Not full isolation.
 10. Why stdio and not HTTP for MCP? One process on the Space, no second deployment.
