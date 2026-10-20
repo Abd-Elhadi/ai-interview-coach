@@ -47,6 +47,14 @@ def _loaded():
     return gr.update(value="", visible=False)
 
 
+def _button_loading(label: str):
+    return gr.update(value=f"⏳ {label}...", interactive=False)
+
+
+def _button_ready(label: str):
+    return gr.update(value=label, interactive=True)
+
+
 def _cell(text) -> str:
     return str(text).replace("|", "/").replace("\n", " ")
 
@@ -110,6 +118,7 @@ def start(resume_path, job_text, state):
         _question_audio(session, 0),
         "",
         None,
+        _button_ready("Start interview"),
     )
 
 
@@ -204,6 +213,7 @@ def build_app() -> gr.Blocks:
                     resume = gr.File(label="Resume (.pdf or .txt)", file_types=[".pdf", ".txt"], type="filepath")
                     job = gr.Textbox(label="Job description", lines=10)
                 start_btn = gr.Button("Start interview", variant="primary")
+                start_loading = gr.HTML(visible=False)
                 notes_md = gr.Markdown()
 
                 with gr.Column(visible=False) as interview_col:
@@ -224,10 +234,31 @@ def build_app() -> gr.Blocks:
                     final_md = gr.Markdown()
                     download = gr.File(label="Download report", interactive=False, visible=False)
 
-                start_btn.click(
+                start_event = start_btn.click(
+                    lambda: (_button_loading("Starting interview"), _loading("Preparing your interview...")),
+                    outputs=[start_btn, start_loading],
+                ).then(
                     start,
                     [resume, job, state],
-                    [state, question_md, interview_col, feedback_md, report_col, final_md, download, notes_md, question_audio, answer, mic],
+                    [
+                        state,
+                        question_md,
+                        interview_col,
+                        feedback_md,
+                        report_col,
+                        final_md,
+                        download,
+                        notes_md,
+                        question_audio,
+                        answer,
+                        mic,
+                        start_btn,
+                    ],
+                )
+                start_event.then(_loaded, outputs=start_loading)
+                start_event.failure(
+                    lambda: (_button_ready("Start interview"), _loaded()),
+                    outputs=[start_btn, start_loading],
                 )
                 transcribe_btn.click(transcribe, [mic, state], [answer])
                 submit_btn.click(

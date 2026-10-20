@@ -3,6 +3,20 @@ import gradio as gr
 from interview_coach import quiz_pipeline
 
 MAX_Q = 5
+LOADING_CSS = """
+.coach-action-loading {
+    opacity: 0.8;
+    cursor: wait !important;
+}
+"""
+
+
+def _button_loading(label: str):
+    return gr.update(value=f"⏳ {label}...", interactive=False, elem_classes=["coach-action-loading"])
+
+
+def _button_ready(label: str):
+    return gr.update(value=label, interactive=True, elem_classes=[])
 
 
 def generate(state):
@@ -19,7 +33,7 @@ def generate(state):
             updates.append(gr.update(label=f"{i + 1}. {q.question}", choices=q.options, value=None, visible=True))
         else:
             updates.append(gr.update(visible=False))
-    return [mcqs, gr.update(visible=True), ""] + updates
+    return [mcqs, gr.update(visible=True), ""] + updates + [_button_ready("Generate quiz")]
 
 
 def check(mcqs, p0, p1, p2, p3, p4):
@@ -37,11 +51,28 @@ def check(mcqs, p0, p1, p2, p3, p4):
 
 
 def build(state):
+    gr.HTML(f"<style>{LOADING_CSS}</style>")
     gr.Markdown("### Knowledge quiz\nQuestions are generated from the skills in your job post.")
     quiz_state = gr.State(None)
     gen_btn = gr.Button("Generate quiz", variant="primary")
+    loading = gr.HTML(visible=False)
     radios = [gr.Radio(choices=[], label="", visible=False) for _ in range(MAX_Q)]
     check_btn = gr.Button("Check answers", visible=False)
     result_md = gr.Markdown()
-    gen_btn.click(generate, [state], [quiz_state, check_btn, result_md] + radios)
+    generate_event = gen_btn.click(
+        lambda: (_button_loading("Generate quiz"), gr.update(
+            value='<div class="coach-loader"><span class="coach-loader-dot"></span><span>Generating your quiz...</span></div>',
+            visible=True,
+        )),
+        outputs=[gen_btn, loading],
+    ).then(
+        generate,
+        [state],
+        [quiz_state, check_btn, result_md] + radios + [gen_btn],
+    )
+    generate_event.then(lambda: gr.update(value="", visible=False), outputs=loading)
+    generate_event.failure(
+        lambda: (_button_ready("Generate quiz"), gr.update(value="", visible=False)),
+        outputs=[gen_btn, loading],
+    )
     check_btn.click(check, [quiz_state] + radios, [result_md])
