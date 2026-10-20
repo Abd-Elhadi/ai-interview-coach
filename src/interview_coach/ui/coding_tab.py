@@ -3,6 +3,24 @@ import gradio as gr
 from interview_coach import coding_pipeline
 
 EDITOR_LANGUAGES = {"python": "python", "javascript": "javascript", "csharp": "c"}
+LOADING_CSS = """
+.coach-action-loading {
+    opacity: 0.8;
+    cursor: wait !important;
+}
+"""
+
+
+def _button_loading(label: str):
+    return gr.update(value=f"⏳ {label}...", interactive=False, elem_classes=["coach-action-loading"])
+
+
+def _button_ready(label: str):
+    return gr.update(value=label, interactive=True, elem_classes=[])
+
+
+def _button_disabled(label: str):
+    return gr.update(value=label, interactive=False, elem_classes=[])
 
 
 def _problem_md(session: coding_pipeline.CodingSession) -> str:
@@ -41,10 +59,18 @@ def generate(language, difficulty):
         session = coding_pipeline.get_problem(difficulty, language)
     except Exception as err:
         raise gr.Error(f"Could not load a coding problem: {err}")
-    return session, _problem_md(session), gr.update(
-        value=session.problem["starter_code"],
-        language=EDITOR_LANGUAGES[session.problem["language"]],
-    ), "", gr.update(value="", visible=False)
+    return (
+        session,
+        _problem_md(session),
+        gr.update(
+            value=session.problem["starter_code"],
+            language=EDITOR_LANGUAGES[session.problem["language"]],
+        ),
+        "",
+        gr.update(value="", visible=False),
+        _button_ready("Get problem"),
+        _button_ready("Run tests and review"),
+    )
 
 
 def review(code, session):
@@ -58,10 +84,11 @@ def review(code, session):
         raise gr.Error(str(err))
     except Exception as err:
         raise gr.Error(f"Code review failed: {err}")
-    return _review_md(evaluation, reports), gr.update(value="", visible=False)
+    return _review_md(evaluation, reports), gr.update(value="", visible=False), _button_ready("Run tests and review")
 
 
 def build() -> None:
+    gr.HTML(f"<style>{LOADING_CSS}</style>")
     coding_state = gr.State(None)
     with gr.Row():
         language = gr.Dropdown(["Python", "JavaScript", "C#"], value="Python", label="Language")
@@ -69,28 +96,42 @@ def build() -> None:
         generate_btn = gr.Button("Get problem", variant="primary")
     problem_md = gr.Markdown()
     code = gr.Code(label="Your solution", language="python", lines=18)
-    review_btn = gr.Button("Run tests and review", variant="primary")
+    review_btn = gr.Button("Run tests and review", variant="primary", interactive=False)
     loading = gr.HTML(visible=False)
     result_md = gr.Markdown()
-    generate_btn.click(
-        lambda: gr.update(
+    generate_event = generate_btn.click(
+        lambda: (_button_loading("Get problem"), gr.update(
             value='<div class="coach-loader"><span class="coach-loader-dot"></span><span>Loading a coding problem...</span></div>',
             visible=True,
-        ),
-        outputs=loading,
+        ), _button_disabled("Run tests and review")),
+        outputs=[generate_btn, loading, review_btn],
     ).then(
         generate,
         [language, difficulty],
-        [coding_state, problem_md, code, result_md, loading],
+        [coding_state, problem_md, code, result_md, loading, generate_btn, review_btn],
     )
-    review_btn.click(
-        lambda: gr.update(
+    generate_event.then(lambda: gr.update(value="", visible=False), outputs=loading)
+    generate_event.failure(
+        lambda: (
+            _button_ready("Get problem"),
+            gr.update(value="", visible=False),
+            _button_disabled("Run tests and review"),
+        ),
+        outputs=[generate_btn, loading, review_btn],
+    )
+    review_event = review_btn.click(
+        lambda: (_button_loading("Run tests and review"), gr.update(
             value='<div class="coach-loader"><span class="coach-loader-dot"></span><span>Running tests and reviewing your code...</span></div>',
             visible=True,
-        ),
-        outputs=loading,
+        )),
+        outputs=[review_btn, loading],
     ).then(
         review,
         [code, coding_state],
-        [result_md, loading],
+        [result_md, loading, review_btn],
+    )
+    review_event.then(lambda: gr.update(value="", visible=False), outputs=loading)
+    review_event.failure(
+        lambda: (_button_ready("Run tests and review"), gr.update(value="", visible=False)),
+        outputs=[review_btn, loading],
     )
