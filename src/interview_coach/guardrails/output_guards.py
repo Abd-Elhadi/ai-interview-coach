@@ -3,7 +3,7 @@ from typing import Any, Tuple
 
 from crewai import TaskOutput
 
-from interview_coach.rubrics import dimension_names
+from interview_coach.rubrics import bank_ids, dimension_names
 from interview_coach.schemas import AnswerEvaluation, CodeEvaluation, FinalReport, InterviewPlan
 
 NUMBER = re.compile(r"\d+(?:[.,]\d+)?%?")
@@ -27,6 +27,11 @@ def valid_plan(result: TaskOutput) -> Tuple[bool, Any]:
         return False, "Questions must be exactly: behavioral, technical, situational, in that order."
     if any(not q.source_question_id.strip() for q in plan.questions):
         return False, "Every question needs the source_question_id returned by the MCP tool."
+    known = bank_ids()
+    if any(q.source_question_id not in known for q in plan.questions):
+        return False, "source_question_id must be an id returned by get_interview_questions."
+    if len({q.source_question_id for q in plan.questions}) != len(plan.questions):
+        return False, "Each question must come from a different source question."
     return True, result.raw
 
 

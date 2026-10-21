@@ -16,3 +16,6 @@ def weights_for(question_type: str) -> dict[str, float]:
 
 def dimension_names(question_type: str) -> set[str]:
     return set(weights_for(question_type))
+
+def bank_ids() -> set[str]:
+    return {q["id"] for q in json.loads((DATA / "questions.json").read_text())}
