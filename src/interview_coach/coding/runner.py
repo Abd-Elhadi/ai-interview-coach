@@ -6,6 +6,7 @@ temp directory, time and memory limits. Not a replacement for a container sandbo
 import ast
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -200,6 +201,8 @@ for (const test of cases) {
 console.log(JSON.stringify({results}));
 """
     (base / "harness.js").write_text(harness)
+    if not re.search(r"\bmodule\.exports\b|\bexports\.", code):
+        code = f"{code.rstrip()}\n\nmodule.exports = {{ {problem['function_name']} }};\n"
     (base / "solution.js").write_text(code)
     (base / "cases.json").write_text(json.dumps(problem["tests"]))
     return _run_json_process(["node", "harness.js", problem["function_name"]], tmp)
@@ -207,23 +210,57 @@ console.log(JSON.stringify({results}));
 
 def _csharp_case(problem_id: str, args: list, function_name: str | None = None) -> tuple[str, str]:
     function_name = function_name or CSHARP_FUNCTIONS[problem_id]
+    if len(args) == 3 and all(isinstance(value, list) for value in args[:2]) and isinstance(args[2], int):
+        call = (
+            f"Solution.{function_name}({_csharp_array(args[0])}, "
+            f"{_csharp_array(args[1])}, {args[2]})"
+        )
+        return call, json.dumps(args)
+    if len(args) == 2 and all(isinstance(value, list) for value in args):
+        call = f"Solution.{function_name}({_csharp_array(args[0])}, {_csharp_array(args[1])})"
+        return call, json.dumps(args)
     if problem_id == "c1":
-        call = f"Solution.{function_name}(new[] {{{','.join(map(str, args[0]))}}}, {args[1]})"
+        call = f"Solution.{function_name}({_csharp_array(args[0])}, {args[1]})"
     elif problem_id == "c2":
         call = f"Solution.{function_name}({json.dumps(args[0])})"
     elif problem_id == "c3":
-        intervals = ",".join("new[] {" + ",".join(map(str, pair)) + "}" for pair in args[0])
+        intervals = ",".join(_csharp_array(pair) for pair in args[0])
         call = f"Solution.{function_name}(new[] {{{intervals}}})"
     else:
-        call = f"Solution.{function_name}(new[] {{{','.join(map(str, args[0]))}}}, {args[1]})"
+        call = f"Solution.{function_name}({_csharp_array(args[0])}, {args[1]})"
     return call, json.dumps(args)
+
+
+def _csharp_array(values: list) -> str:
+    if not all(isinstance(value, int) for value in values):
+        raise TypeError("C# array test arguments must contain integers.")
+    return "new[] {" + ",".join(map(str, values)) + "}"
+
+
+def _prepare_csharp_solution(code: str) -> str:
+    if re.search(r"\bclass\s+Solution\b", code):
+        return code
+    method_code = re.sub(
+        r"\bpublic\s+(?!static\b)",
+        "public static ",
+        code,
+        count=1,
+    )
+    return "public static class Solution\n{\n" + method_code.strip() + "\n}\n"
 
 
 def _run_csharp(code: str, problem: dict, tmp: str) -> dict:
     base = Path(tmp)
     checks = []
     for test in problem["tests"]:
-        call, _ = _csharp_case(problem["id"], test["args"], problem["function_name"])
+        try:
+            call, _ = _csharp_case(problem["id"], test["args"], problem["function_name"])
+        except (IndexError, TypeError, ValueError) as err:
+            checks.append(
+                "results.Add(new { passed = false, error = "
+                f"\"Invalid generated test case: {str(err).replace(chr(34), chr(39))}\" }});"
+            )
+            continue
         expected = json.dumps(test["expected"], separators=(",", ":")).replace('"', '\\"')
         checks.append(
             f"try {{ var got = System.Text.Json.JsonSerializer.Serialize({call}); "
@@ -242,7 +279,7 @@ public static class Harness
 }
 """.replace("CHECKS", "\n        ".join(checks))
     header = "using System;\nusing System.Collections.Generic;\nusing System.Text.Json;\n"
-    (base / "Program.cs").write_text(header + code + "\n" + harness)
+    (base / "Program.cs").write_text(header + _prepare_csharp_solution(code) + "\n" + harness)
     (base / "Coding.csproj").write_text(
         "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup>"
         "<OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework>"

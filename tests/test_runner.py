@@ -1,3 +1,5 @@
+import pytest
+
 from interview_coach.coding import runner
 
 GOOD = """
@@ -40,3 +42,73 @@ def test_hidden_cases_not_exposed():
     out = runner.run_tests(GOOD, "c1")
     hidden = [r for r in out["results"] if not r["visible"]]
     assert hidden and all("args" not in r and "expected" not in r for r in hidden)
+
+
+def test_malformed_csharp_case_is_reported_not_raised(monkeypatch, tmp_path):
+    problem = {
+        "id": "c1",
+        "function_name": "TwoSum",
+        "tests": [{"args": [[1, 2]], "expected": [0, 1], "visible": True}],
+    }
+    monkeypatch.setattr(
+        runner,
+        "_run_json_process",
+        lambda *args, **kwargs: {
+            "results": [{"passed": False, "error": "Invalid generated test case"}]
+        },
+    )
+    out = runner._run_csharp("public static class Solution {}", problem, str(tmp_path))
+    assert out["results"][0]["error"] == "Invalid generated test case"
+
+
+def test_standalone_csharp_method_is_wrapped_for_runner(monkeypatch, tmp_path):
+    problem = {
+        "id": "c1",
+        "function_name": "findUniqueElements",
+        "tests": [{"args": [[1], [2]], "expected": [1, 2], "visible": True}],
+    }
+    captured = {}
+
+    def fake_process(command, cwd, **kwargs):
+        captured["source"] = (tmp_path / "Program.cs").read_text()
+        return {"results": [{"passed": True}]}
+
+    monkeypatch.setattr(runner, "_run_json_process", fake_process)
+    runner._run_csharp(
+        "public int[] findUniqueElements(int[] array1, int[] array2) { return array1; }",
+        problem,
+        str(tmp_path),
+    )
+
+    assert "public static class Solution" in captured["source"]
+    assert "public static int[] findUniqueElements" in captured["source"]
+
+
+def test_csharp_three_argument_array_call_matches_generated_signature():
+    call, _ = runner._csharp_case(
+        "c1",
+        [[1, 2], [2, 3], 2],
+        "findPairsWithSum",
+    )
+    assert call == "Solution.findPairsWithSum(new[] {1,2}, new[] {2,3}, 2)"
+
+
+def test_standalone_javascript_function_is_exported(monkeypatch, tmp_path):
+    problem = {
+        "function_name": "findMaxCommonElement",
+        "tests": [{"args": [[1], [1]], "expected": 1, "visible": True}],
+    }
+    captured = {}
+
+    def fake_process(command, cwd, **kwargs):
+        captured["source"] = (tmp_path / "solution.js").read_text()
+        return {"results": [{"passed": True}]}
+
+    monkeypatch.setattr(runner, "_run_json_process", fake_process)
+    runner._run_javascript(
+        "function findMaxCommonElement(arr1, arr2) { return 1; }",
+        problem,
+        str(tmp_path),
+    )
+
+    assert "module.exports = { findMaxCommonElement };" in captured["source"]
