@@ -1,5 +1,10 @@
 import tempfile
 from pathlib import Path
+from xml.sax.saxutils import escape
+
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
 from interview_coach.schemas import FinalReport
 
@@ -23,4 +28,33 @@ def save_report(text: str) -> str:
     folder = Path(tempfile.mkdtemp(prefix="report_"))
     path = folder / "interview_report.md"
     path.write_text(text, encoding="utf-8")
+    return str(path)
+
+
+def _clean(text: str) -> str:
+    """Standard PDF fonts use a Western encoding. Replace anything outside it."""
+    return text.encode("cp1252", "replace").decode("cp1252")
+
+
+def report_to_pdf(text: str) -> str:
+    styles = getSampleStyleSheet()
+    bullet = ParagraphStyle("bullet", parent=styles["BodyText"], leftIndent=14, bulletIndent=2)
+    story = []
+    for raw in text.splitlines():
+        line = _clean(raw.rstrip())
+        if not line.strip():
+            story.append(Spacer(1, 6))
+        elif line.startswith("### "):
+            story.append(Paragraph(escape(line[4:]), styles["Heading3"]))
+        elif line.startswith("## "):
+            story.append(Paragraph(escape(line[3:]), styles["Heading2"]))
+        elif line.startswith("# "):
+            story.append(Paragraph(escape(line[2:]), styles["Heading1"]))
+        elif line.startswith("- "):
+            story.append(Paragraph(escape(line[2:]), bullet, bulletText="\u2022"))
+        else:
+            story.append(Paragraph(escape(line), styles["BodyText"]))
+    folder = Path(tempfile.mkdtemp(prefix="report_"))
+    path = folder / "interview_report.pdf"
+    SimpleDocTemplate(str(path), pagesize=letter, title="Interview Coaching Report").build(story)
     return str(path)

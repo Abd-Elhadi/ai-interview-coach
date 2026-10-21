@@ -6,3 +6,5 @@ __pycache__/
 *.mp3
 tmp/
 .pytest_cache/
+data/
+tmp/

@@ -64,10 +64,31 @@ Edit and confirm each transcript before it is scored. Edit, approve, or reject t
 
 ## Features
 
-- Done: job and resume analysis, MCP question bank and rubric, question audio via synthesize_question, record one answer, transcribe with transcribe_answer, edit and confirm the transcript, score that text, improved answers, report approval and download.
-- Done: coding session with Python, JavaScript, and C# execution at easy, medium, and hard levels.
-- Done: knowledge quiz.
-- Not done: login, email.
+- Sign up and sign in. Reports and seen questions are saved per account.
+- Dynamic interviews: questions are sampled at random from a 24-question MCP bank, skip questions you already saw, and are tailored to your resume and the job.
+- Voice: spoken questions, recorded answers, editable transcript before scoring.
+- Rubric scoring with evidence, improved answers, and session memory across questions.
+- Knowledge quiz generated from the job post.
+- Coding session with random problems, sandboxed tests, and an AI code review. Python by default.
+- Report: edit, approve, download as Markdown or PDF, email the PDF to your account address, and keep it under My reports.
+
+## Configuration
+
+| Variable                   | Purpose                                                            |
+| -------------------------- | ------------------------------------------------------------------ |
+| OPENAI_API_KEY             | Secret. LLM, speech                                                |
+| MODEL                      | LLM name, default gpt-4o-mini                                      |
+| RESEND_API_KEY, EMAIL_FROM | Email delivery                                                     |
+| APP_DB_PATH                | SQLite path, default data/app.db                                   |
+| ENABLED_LANGUAGES          | python (default). Add javascript, csharp only on a trusted machine |
+| USE_KNOWLEDGE              | 0 disables the coach knowledge source                              |
+
+## Known limits
+
+- Space disk is not persistent, so accounts and saved reports reset when the Space restarts.
+- Email addresses are not verified at sign up. Email goes only to the account address, 3 per hour.
+- The code sandbox is demo-grade, not container isolation.
+- The Resend test sender delivers only to the Resend account owner until a domain is verified.
 
 ## Setup
 
