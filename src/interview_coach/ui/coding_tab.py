@@ -49,11 +49,20 @@ def _review_md(evaluation, reports: dict) -> str:
     return "\n".join(lines)
 
 
-def generate(language, difficulty, used, user):
+def generate(language, difficulty, used, user, state):
     if not user:
         raise gr.Error("Sign in first.")
+    if not state or "session" not in state:
+        raise gr.Error("Start the interview first so the problem can use your resume and job description.")
     try:
-        session = coding_pipeline.get_problem(difficulty, language, exclude=used)
+        interview_session = state["session"]
+        session = coding_pipeline.get_problem(
+            difficulty,
+            language,
+            exclude=used,
+            job_profile=interview_session.job_profile,
+            resume_text=interview_session.resume_text,
+        )
     except Exception as err:
         raise gr.Error(f"Could not load a coding problem: {err}")
     return (
@@ -82,7 +91,7 @@ def review(code, session, user):
     return _review_md(evaluation, reports), gr.update(value="", visible=False)
 
 
-def build(user) -> None:
+def build(user, state) -> None:
     coding_state = gr.State(None)
     used_ids = gr.State([])
     choices = [coding_pipeline.LANGUAGE_DISPLAY[name] for name in runner.available_languages()]
@@ -100,7 +109,7 @@ def build(user) -> None:
         outputs=loading,
     ).then(
         generate,
-        [language, difficulty, used_ids, user],
+        [language, difficulty, used_ids, user, state],
         [coding_state, used_ids, problem_md, code, result_md, loading],
     )
     review_btn.click(

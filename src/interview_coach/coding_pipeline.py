@@ -1,4 +1,5 @@
 """Coding-session orchestration: deterministic execution first, qualitative review second."""
+import ast
 import json
 import random
 from dataclasses import dataclass
@@ -6,7 +7,8 @@ from dataclasses import dataclass
 from interview_coach.coding import runner
 from interview_coach.crew import CodeReviewCrew
 from interview_coach.pipeline import _model
-from interview_coach.schemas import CodeEvaluation
+from interview_coach.crew_coding_problem import CodingProblemCrew
+from interview_coach.schemas import CodeEvaluation, CodingProblem, CodingProblemDraft
 
 DIFFICULTY_LEVELS = {"easy": "junior", "medium": "mid", "hard": "senior"}
 LANGUAGE_NAMES = {"Python": "python", "JavaScript": "javascript", "C#": "csharp"}
@@ -24,11 +26,69 @@ def correctness_score(passed: int, total: int) -> int:
     return 1 + round(passed / total / 0.25)
 
 
-def get_problem(difficulty: str, language: str = "python", exclude: list | None = None) -> CodingSession:
-    level = DIFFICULTY_LEVELS.get(difficulty.lower(), difficulty.lower())
+def _parse_generated_tests(raw_tests: str) -> list[dict]:
+    text = raw_tests.strip()
+    start = text.find("[")
+    if start < 0:
+        raise ValueError("Generated coding tests did not contain a JSON array.")
+    candidate = text[start:]
+    try:
+        tests, _ = json.JSONDecoder().raw_decode(candidate)
+    except json.JSONDecodeError as json_err:
+        try:
+            tests = ast.literal_eval(candidate)
+        except (SyntaxError, ValueError) as literal_err:
+            literal_message = getattr(literal_err, "msg", str(literal_err))
+            raise ValueError(
+                "Generated coding tests were not valid JSON or a Python literal: "
+                f"{json_err.msg}; {literal_message}."
+            ) from literal_err
+    if not isinstance(tests, list):
+        raise ValueError("Generated coding tests must be a JSON array.")
+    return tests
+
+
+def get_problem(
+    difficulty: str,
+    language: str = "python",
+    exclude: list | None = None,
+    job_profile=None,
+    resume_text: str = "",
+) -> CodingSession:
     language = LANGUAGE_NAMES.get(language, language.lower())
     if language not in runner.available_languages():
         raise ValueError(f"{language} is not enabled on this deployment.")
+    if job_profile is not None:
+        result = CodingProblemCrew().crew().kickoff(
+            inputs={
+                "job_profile_json": job_profile.model_dump_json(),
+                "resume_text": resume_text,
+                "language": language,
+                "difficulty": difficulty.lower(),
+            }
+        )
+        draft = _model(result, CodingProblemDraft)
+        tests = _parse_generated_tests(draft.tests_json)
+        problem = {
+            "id": draft.problem_id,
+            "title": draft.title,
+            "prompt": draft.prompt,
+            "function_name": draft.function_name,
+            "starter_code": draft.starter_code,
+            "tests": tests,
+            "language": language,
+            "difficulty": difficulty.lower(),
+        }
+        validated = CodingProblem.model_validate(problem)
+        visible_tests = [test.model_dump() for test in validated.tests if test.visible]
+        if len(visible_tests) < 2 or len(visible_tests) == len(validated.tests):
+            raise ValueError("Generated coding problem must include visible and hidden tests.")
+        normalized = validated.model_dump()
+        normalized["language"] = language
+        normalized["difficulty"] = difficulty.lower()
+        return CodingSession(problem=normalized, visible_tests=visible_tests)
+
+    level = DIFFICULTY_LEVELS.get(difficulty.lower(), difficulty.lower())
     problems = [p for p in runner.load_all_problems() if level in p["levels"]]
     if not problems:
         raise ValueError(f"No coding problem available for {level} level.")
@@ -49,7 +109,7 @@ def get_problem(difficulty: str, language: str = "python", exclude: list | None 
 def review_solution(session: CodingSession, code: str) -> tuple:
     problem = session.problem
     language = problem["language"]
-    report = runner.run_tests(code, problem["id"], language)
+    report = runner.run_tests(code, problem["id"], language, problem)
     report["language"] = language
     empty = {"passed": 0, "total": 0, "error": None, "results": [], "language": language}
     if report["error"]:
@@ -72,7 +132,7 @@ def review_solution(session: CodingSession, code: str) -> tuple:
 
     suggested = dict(empty)
     if evaluation.improved_solution.strip():
-        suggested = runner.run_tests(evaluation.improved_solution, problem["id"], language)
+        suggested = runner.run_tests(evaluation.improved_solution, problem["id"], language, problem)
         suggested["language"] = language
         evaluation.suggested_tests_passed = suggested["passed"]
         evaluation.suggested_tests_total = suggested["total"]

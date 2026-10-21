@@ -202,19 +202,20 @@ console.log(JSON.stringify({results}));
     (base / "harness.js").write_text(harness)
     (base / "solution.js").write_text(code)
     (base / "cases.json").write_text(json.dumps(problem["tests"]))
-    return _run_json_process(["node", "harness.js", JS_FUNCTIONS[problem["id"]]], tmp)
+    return _run_json_process(["node", "harness.js", problem["function_name"]], tmp)
 
 
-def _csharp_case(problem_id: str, args: list) -> tuple[str, str]:
+def _csharp_case(problem_id: str, args: list, function_name: str | None = None) -> tuple[str, str]:
+    function_name = function_name or CSHARP_FUNCTIONS[problem_id]
     if problem_id == "c1":
-        call = f"Solution.TwoSum(new[] {{{','.join(map(str, args[0]))}}}, {args[1]})"
+        call = f"Solution.{function_name}(new[] {{{','.join(map(str, args[0]))}}}, {args[1]})"
     elif problem_id == "c2":
-        call = f"Solution.IsValidParentheses({json.dumps(args[0])})"
+        call = f"Solution.{function_name}({json.dumps(args[0])})"
     elif problem_id == "c3":
         intervals = ",".join("new[] {" + ",".join(map(str, pair)) + "}" for pair in args[0])
-        call = f"Solution.MergeIntervals(new[] {{{intervals}}})"
+        call = f"Solution.{function_name}(new[] {{{intervals}}})"
     else:
-        call = f"Solution.TopKFrequent(new[] {{{','.join(map(str, args[0]))}}}, {args[1]})"
+        call = f"Solution.{function_name}(new[] {{{','.join(map(str, args[0]))}}}, {args[1]})"
     return call, json.dumps(args)
 
 
@@ -222,7 +223,7 @@ def _run_csharp(code: str, problem: dict, tmp: str) -> dict:
     base = Path(tmp)
     checks = []
     for test in problem["tests"]:
-        call, _ = _csharp_case(problem["id"], test["args"])
+        call, _ = _csharp_case(problem["id"], test["args"], problem["function_name"])
         expected = json.dumps(test["expected"], separators=(",", ":")).replace('"', '\\"')
         checks.append(
             f"try {{ var got = System.Text.Json.JsonSerializer.Serialize({call}); "
@@ -256,8 +257,11 @@ public static class Harness
     )
 
 def available_languages() -> list[str]:
-    """Languages enabled here. Python only by default. Set ENABLED_LANGUAGES=python,javascript,csharp to add more."""
-    enabled = {part.strip().lower() for part in os.getenv("ENABLED_LANGUAGES", "python").split(",")}
+    """Return configured languages whose runtimes are installed."""
+    enabled = {
+        part.strip().lower()
+        for part in os.getenv("ENABLED_LANGUAGES", "python,javascript,csharp").split(",")
+    }
     tools = {
         "python": True,
         "javascript": shutil.which("node") is not None,
@@ -276,6 +280,8 @@ def run_tests(
     if language not in available_languages():
         raise ValueError(f"{language} is not enabled on this deployment.")
     problem = problem or load_problem(problem_id)
+    if "tests" not in problem:
+        problem = {**problem, "tests": load_problem(problem_id)["tests"]}
     tests = problem["tests"]
     if len(code) > MAX_CODE_CHARS:
         return _failed(tests, "Code exceeds the size limit.")

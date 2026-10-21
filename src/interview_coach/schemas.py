@@ -160,3 +160,12 @@ class CodingProblem(BaseModel):
     function_name: str
     starter_code: str
     tests: list[CodingTest] = Field(min_length=3, max_length=20)
+
+
+class CodingProblemDraft(BaseModel):
+    problem_id: Literal["c1", "c2", "c3", "c4"]
+    title: str
+    prompt: str
+    function_name: str
+    starter_code: str
+    tests_json: str

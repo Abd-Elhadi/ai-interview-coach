@@ -6,12 +6,13 @@ generate_problem:
         Generate it for language {language} and difficulty {difficulty}.
         The problem must assess a relevant technical skill from the profile. Return a
         short title and clear prompt, a valid function_name, starter_code with the
-        function signature but no solution, and 3 to 8 JSON-serializable tests.
-        Include at least 2 visible and 1 hidden test. Each test must contain args, expected,
-        and visible. Keep the function signature compatible with the selected language.
-        For C#, use one of the supported problem ids c1, c2, c3, or c4 and match its
-        corresponding argument shape so the deterministic runner can execute it.
+        function signature but no solution, and tests_json containing only a JSON array
+        of 3 to 8 tests. Do not add explanations before or after the array. Include at least 2 visible and 1 hidden test. Each test must
+        contain args, expected, and visible. Use problem_id c1 for two integer-array
+        arguments, c2 for a string argument, c3 for intervals, or c4 for an integer
+        array plus k. For JavaScript and C#, use the corresponding function signature
+        for the selected problem_id so the deterministic runner can execute it.
         Do not use requirements that are not supported by the job profile.
     expected_output: >
-        JSON matching the CodingProblem schema.
+        JSON matching the CodingProblemDraft schema.
     agent: problem_writer

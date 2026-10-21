@@ -2,7 +2,7 @@ import pytest
 
 from interview_coach import coding_pipeline
 from interview_coach.coding import runner
-from interview_coach.schemas import CodeEvaluation
+from interview_coach.schemas import CodeEvaluation, CodingProblemDraft, JobProfile
 from types import SimpleNamespace
 
 GOOD = """
@@ -56,6 +56,66 @@ def test_review_rechecks_suggestion(monkeypatch):
     assert reports["suggested"]["passed"] == 4
 
 
+def test_dynamic_problem_uses_resume_and_job_profile(monkeypatch):
+    profile = JobProfile(
+        title="Backend Engineer",
+        seniority="mid",
+        required_skills=["Python", "APIs"],
+        responsibilities=["Build services"],
+        interview_themes=["Reliability"],
+    )
+    draft = CodingProblemDraft(
+        problem_id="c1",
+        title="Service Request Matching",
+        prompt="Return matching request indices.",
+        function_name="match_requests",
+        starter_code="def match_requests(items, target):\n    pass\n",
+        tests_json=(
+            '[{"args":[[2, 7, 11], 9],"expected":[0, 1],"visible":true},'
+            '{"args":[[1, 2], 3],"expected":[0, 1],"visible":false},'
+            '{"args":[[4, 5], 9],"expected":[0, 1],"visible":true}]'
+        ),
+    )
+    captured = {}
+
+    class FakeCrew:
+        def crew(self):
+            return self
+
+        def kickoff(self, inputs):
+            captured.update(inputs)
+            return SimpleNamespace(pydantic=draft)
+
+    monkeypatch.setattr(coding_pipeline, "CodingProblemCrew", FakeCrew)
+    session = coding_pipeline.get_problem(
+        "medium",
+        "JavaScript",
+        job_profile=profile,
+        resume_text="Built Python APIs and service integrations.",
+    )
+
+    assert session.problem["language"] == "javascript"
+    assert session.problem["title"] == "Service Request Matching"
+    assert len(session.visible_tests) == 2
+    assert "Backend Engineer" in captured["job_profile_json"]
+    assert "Python APIs" in captured["resume_text"]
+
+
+def test_generated_tests_allow_trailing_model_text():
+    raw = '[{"args":[[1, 2], 3],"expected":[0, 1],"visible":true}] Extra explanation.'
+    assert coding_pipeline._parse_generated_tests(raw)[0]["expected"] == [0, 1]
+
+
+def test_generated_tests_allow_python_literal_format():
+    raw = "[{'args': [['hello']], 'expected': 1, 'visible': True}]"
+    assert coding_pipeline._parse_generated_tests(raw)[0]["expected"] == 1
+
+
+def test_generated_tests_report_parse_errors_without_attribute_error():
+    with pytest.raises(ValueError, match="not valid JSON or a Python literal"):
+        coding_pipeline._parse_generated_tests("[{'args': invalid}]")
+
+
 def test_bad_suggestion_is_removed(monkeypatch):
     session = coding_pipeline.get_problem("easy", "Python", exclude=["c2"])
     wrong = "def two_sum(nums, target):\n    return [0, 0]\n"
@@ -78,8 +138,9 @@ def test_rejected_code_never_reaches_the_llm(monkeypatch):
     assert "Import not allowed" in reports["submitted"]["error"]
 
 
-def test_other_languages_disabled_by_default(monkeypatch):
+def test_other_languages_require_available_runtime(monkeypatch):
     monkeypatch.delenv("ENABLED_LANGUAGES", raising=False)
-    assert runner.available_languages() == ["python"]
+    assert "python" in runner.available_languages()
+    monkeypatch.setenv("ENABLED_LANGUAGES", "python")
     with pytest.raises(ValueError):
         runner.run_tests("x", "c1", "javascript")

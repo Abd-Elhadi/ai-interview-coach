@@ -3,7 +3,7 @@ import os
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 
-from interview_coach.schemas import CodingProblem
+from interview_coach.schemas import CodingProblemDraft
 
 MODEL = os.getenv("MODEL", "gpt-4o-mini")
 
@@ -19,7 +19,7 @@ class CodingProblemCrew:
 
     @task
     def generate_problem(self) -> Task:
-        return Task(config=self.tasks_config["generate_problem"], output_pydantic=CodingProblem)
+        return Task(config=self.tasks_config["generate_problem"], output_pydantic=CodingProblemDraft)
 
     @crew
     def crew(self) -> Crew:

@@ -297,7 +297,7 @@ def build_app() -> gr.Blocks:
                     build_quiz_tab(state)
 
                 with gr.Tab("Coding"):
-                    coding_tab.build(user)
+                    coding_tab.build(user, state)
 
                 with gr.Tab("My reports"):
                     refresh_btn = gr.Button("Refresh list")
