@@ -28,6 +28,34 @@
         "skills": ["leadership", "change management"]
     },
     {
+        "id": "b5",
+        "category": "behavioral",
+        "levels": ["junior", "mid"],
+        "question": "Tell me about a time you received critical feedback. How did you respond?",
+        "skills": ["growth mindset", "communication"]
+    },
+    {
+        "id": "b6",
+        "category": "behavioral",
+        "levels": ["junior"],
+        "question": "Describe a project where you had to learn a new technology quickly. How did you approach it?",
+        "skills": ["learning", "adaptability"]
+    },
+    {
+        "id": "b7",
+        "category": "behavioral",
+        "levels": ["mid", "senior"],
+        "question": "Tell me about a time you had to make a decision with incomplete information. What was the outcome?",
+        "skills": ["judgment", "decision making"]
+    },
+    {
+        "id": "b8",
+        "category": "behavioral",
+        "levels": ["senior"],
+        "question": "Describe a time you mentored a teammate or raised the quality bar for your team. What changed?",
+        "skills": ["mentoring", "quality"]
+    },
+    {
         "id": "t1",
         "category": "technical",
         "levels": ["junior", "mid", "senior"],
@@ -56,6 +84,34 @@
         "skills": ["system design", "llm applications"]
     },
     {
+        "id": "t5",
+        "category": "technical",
+        "levels": ["junior", "mid"],
+        "question": "What is the difference between SQL and NoSQL databases, and when would you choose each?",
+        "skills": ["databases", "tradeoffs"]
+    },
+    {
+        "id": "t6",
+        "category": "technical",
+        "levels": ["junior"],
+        "question": "How would you write unit tests for a function that calculates a discount? Which cases would you cover?",
+        "skills": ["testing", "edge cases"]
+    },
+    {
+        "id": "t7",
+        "category": "technical",
+        "levels": ["mid", "senior"],
+        "question": "How would you design caching for a read-heavy API, and how would you handle invalidation?",
+        "skills": ["caching", "performance"]
+    },
+    {
+        "id": "t8",
+        "category": "technical",
+        "levels": ["senior"],
+        "question": "How would you design a rate limiter for a public API? Discuss algorithms and tradeoffs.",
+        "skills": ["system design", "scalability"]
+    },
+    {
         "id": "s1",
         "category": "situational",
         "levels": ["junior", "mid", "senior"],
@@ -82,5 +138,33 @@
         "levels": ["senior"],
         "question": "You inherit a system with no documentation and frequent outages. What are your first 30 days?",
         "skills": ["planning", "reliability"]
+    },
+    {
+        "id": "s5",
+        "category": "situational",
+        "levels": ["junior", "mid"],
+        "question": "A teammate's pull request has a security issue, but they are under deadline pressure. What do you do?",
+        "skills": ["code review", "security"]
+    },
+    {
+        "id": "s6",
+        "category": "situational",
+        "levels": ["junior"],
+        "question": "You are asked to estimate a task you have never done before. How do you approach it?",
+        "skills": ["estimation", "communication"]
+    },
+    {
+        "id": "s7",
+        "category": "situational",
+        "levels": ["mid", "senior"],
+        "question": "Two stakeholders give you conflicting priorities for the same sprint. How do you resolve it?",
+        "skills": ["prioritization", "stakeholder management"]
+    },
+    {
+        "id": "s8",
+        "category": "situational",
+        "levels": ["senior"],
+        "question": "Production latency doubled after a release and rollback is risky. What is your plan?",
+        "skills": ["incident response", "risk management"]
     }
 ]

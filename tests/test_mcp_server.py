@@ -38,3 +38,17 @@ def test_read_resume_restricted(tmp_path, monkeypatch):
         server.read_resume("cv.exe")
     with pytest.raises(FileNotFoundError):
         server.read_resume("../secret.txt")
+
+def test_questions_vary_between_calls():
+    firsts = {server.get_interview_questions("x", "mid", "behavioral", 1)[0]["id"] for _ in range(40)}
+    assert len(firsts) > 1
+
+
+def test_excluded_ids_are_skipped():
+    out = server.get_interview_questions("x", "mid", "behavioral", 5, ["b1", "b2"])
+    assert not {"b1", "b2"} & {q["id"] for q in out}
+
+
+def test_exclusion_falls_back_when_pool_is_exhausted():
+    every_mid = ["b1", "b2", "b3", "b5", "b7"]
+    assert server.get_interview_questions("x", "mid", "behavioral", 1, every_mid)
