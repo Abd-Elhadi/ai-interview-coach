@@ -13,6 +13,7 @@ from interview_coach.schemas import CodeEvaluation, CodingProblem, CodingProblem
 DIFFICULTY_LEVELS = {"easy": "junior", "medium": "mid", "hard": "senior"}
 LANGUAGE_NAMES = {"Python": "python", "JavaScript": "javascript", "C#": "csharp"}
 LANGUAGE_DISPLAY = {value: key for key, value in LANGUAGE_NAMES.items()}
+MAX_DYNAMIC_GENERATION_ATTEMPTS = 3
 
 
 @dataclass
@@ -48,6 +49,54 @@ def _parse_generated_tests(raw_tests: str) -> list[dict]:
     return tests
 
 
+def _generate_dynamic_problem(difficulty: str, language: str, job_profile, resume_text: str) -> CodingSession:
+    crew = CodingProblemCrew().crew()
+    inputs = {
+        "job_profile_json": job_profile.model_dump_json(),
+        "resume_text": resume_text,
+        "language": language,
+        "difficulty": difficulty.lower(),
+        "repair_instruction": "Return only the requested valid CodingProblemDraft.",
+    }
+    last_error = None
+    for _ in range(MAX_DYNAMIC_GENERATION_ATTEMPTS):
+        result = crew.kickoff(inputs=inputs)
+        try:
+            draft = _model(result, CodingProblemDraft)
+            tests = _parse_generated_tests(draft.tests_json)
+            problem = {
+                "id": draft.problem_id,
+                "title": draft.title,
+                "prompt": draft.prompt,
+                "function_name": draft.function_name,
+                "starter_code": draft.starter_code,
+                "tests": tests,
+                "language": language,
+                "difficulty": difficulty.lower(),
+            }
+            validated = CodingProblem.model_validate(problem)
+            visible_tests = [test.model_dump() for test in validated.tests if test.visible]
+            if len(visible_tests) < 2 or len(visible_tests) == len(validated.tests):
+                raise ValueError("Generated coding problem must include visible and hidden tests.")
+        except ValueError as err:
+            last_error = err
+            inputs["repair_instruction"] = (
+                "The previous attempt was invalid. Return a complete, valid CodingProblemDraft "
+                "with tests_json as a compact JSON array. Do not truncate or add commentary."
+            )
+            continue
+
+        normalized = validated.model_dump()
+        normalized["language"] = language
+        normalized["difficulty"] = difficulty.lower()
+        return CodingSession(problem=normalized, visible_tests=visible_tests)
+
+    raise ValueError(
+        f"Unable to generate a valid coding problem after "
+        f"{MAX_DYNAMIC_GENERATION_ATTEMPTS} attempts: {last_error}"
+    ) from last_error
+
+
 def get_problem(
     difficulty: str,
     language: str = "python",
@@ -59,34 +108,7 @@ def get_problem(
     if language not in runner.available_languages():
         raise ValueError(f"{language} is not enabled on this deployment.")
     if job_profile is not None:
-        result = CodingProblemCrew().crew().kickoff(
-            inputs={
-                "job_profile_json": job_profile.model_dump_json(),
-                "resume_text": resume_text,
-                "language": language,
-                "difficulty": difficulty.lower(),
-            }
-        )
-        draft = _model(result, CodingProblemDraft)
-        tests = _parse_generated_tests(draft.tests_json)
-        problem = {
-            "id": draft.problem_id,
-            "title": draft.title,
-            "prompt": draft.prompt,
-            "function_name": draft.function_name,
-            "starter_code": draft.starter_code,
-            "tests": tests,
-            "language": language,
-            "difficulty": difficulty.lower(),
-        }
-        validated = CodingProblem.model_validate(problem)
-        visible_tests = [test.model_dump() for test in validated.tests if test.visible]
-        if len(visible_tests) < 2 or len(visible_tests) == len(validated.tests):
-            raise ValueError("Generated coding problem must include visible and hidden tests.")
-        normalized = validated.model_dump()
-        normalized["language"] = language
-        normalized["difficulty"] = difficulty.lower()
-        return CodingSession(problem=normalized, visible_tests=visible_tests)
+        return _generate_dynamic_problem(difficulty, language, job_profile, resume_text)
 
     level = DIFFICULTY_LEVELS.get(difficulty.lower(), difficulty.lower())
     problems = [p for p in runner.load_all_problems() if level in p["levels"]]

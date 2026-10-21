@@ -3,7 +3,11 @@ generate_problem:
         Create one coding interview problem tailored to this job profile:
         {job_profile_json}
 
+        Candidate resume:
+        {resume_text}
+
         Generate it for language {language} and difficulty {difficulty}.
+        {repair_instruction}
         The problem must assess a relevant technical skill from the profile. Return a
         short title and clear prompt, a valid function_name, starter_code with the
         function signature but no solution, and tests_json containing only a JSON array

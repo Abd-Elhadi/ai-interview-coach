@@ -101,6 +101,55 @@ def test_dynamic_problem_uses_resume_and_job_profile(monkeypatch):
     assert "Python APIs" in captured["resume_text"]
 
 
+def test_dynamic_problem_retries_malformed_generated_tests(monkeypatch):
+    profile = JobProfile(
+        title="Backend Engineer",
+        seniority="mid",
+        required_skills=["Python"],
+        responsibilities=["Build services"],
+        interview_themes=["Reliability"],
+    )
+    valid_draft = CodingProblemDraft(
+        problem_id="c1",
+        title="Request Matching",
+        prompt="Return matching request indices.",
+        function_name="match_requests",
+        starter_code="def match_requests(items, target):\n    pass\n",
+        tests_json=(
+            '[{"args":[[2, 7, 11], 9],"expected":[0, 1],"visible":true},'
+            '{"args":[[1, 2], 3],"expected":[0, 1],"visible":false},'
+            '{"args":[[4, 5], 9],"expected":[0, 1],"visible":true}]'
+        ),
+    )
+    responses = iter(
+        [
+            SimpleNamespace(
+                pydantic=CodingProblemDraft(
+                    problem_id="c1",
+                    title="Request Matching",
+                    prompt="Return matching request indices.",
+                    function_name="match_requests",
+                    starter_code="def match_requests(items, target):\n    pass\n",
+                    tests_json="[{'args': [{'items': 1}",
+                )
+            ),
+            SimpleNamespace(pydantic=valid_draft),
+        ]
+    )
+
+    class FakeCrew:
+        def crew(self):
+            return self
+
+        def kickoff(self, inputs):
+            return next(responses)
+
+    monkeypatch.setattr(coding_pipeline, "CodingProblemCrew", FakeCrew)
+    session = coding_pipeline.get_problem("medium", "Python", job_profile=profile)
+
+    assert session.problem["title"] == "Request Matching"
+
+
 def test_generated_tests_allow_trailing_model_text():
     raw = '[{"args":[[1, 2], 3],"expected":[0, 1],"visible":true}] Extra explanation.'
     assert coding_pipeline._parse_generated_tests(raw)[0]["expected"] == [0, 1]
