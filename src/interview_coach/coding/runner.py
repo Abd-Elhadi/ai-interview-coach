@@ -255,10 +255,15 @@ public static class Harness
     )
 
 
-def run_tests(code: str, problem_id: str, language: str = "python") -> dict:
+def run_tests(
+    code: str,
+    problem_id: str,
+    language: str = "python",
+    problem: dict | None = None,
+) -> dict:
     if language not in LANGUAGES:
         raise ValueError(f"Unsupported language: {language}")
-    problem = load_problem(problem_id)
+    problem = problem or load_problem(problem_id)
     tests = problem["tests"]
     if len(code) > MAX_CODE_CHARS:
         return _failed(tests, "Code exceeds the size limit.")

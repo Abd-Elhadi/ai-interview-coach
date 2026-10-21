@@ -1,0 +1,17 @@
+generate_problem:
+    description: >
+        Create one coding interview problem tailored to this job profile:
+        {job_profile_json}
+
+        Generate it for language {language} and difficulty {difficulty}.
+        The problem must assess a relevant technical skill from the profile. Return a
+        short title and clear prompt, a valid function_name, starter_code with the
+        function signature but no solution, and 3 to 8 JSON-serializable tests.
+        Include at least 2 visible and 1 hidden test. Each test must contain args, expected,
+        and visible. Keep the function signature compatible with the selected language.
+        For C#, use one of the supported problem ids c1, c2, c3, or c4 and match its
+        corresponding argument shape so the deterministic runner can execute it.
+        Do not use requirements that are not supported by the job profile.
+    expected_output: >
+        JSON matching the CodingProblem schema.
+    agent: problem_writer

@@ -273,5 +273,5 @@ def build_app() -> gr.Blocks:
                 build_quiz_tab(state)
 
             with gr.Tab("Coding"):
-                coding_tab.build()
+                coding_tab.build(state)
     return demo

@@ -54,9 +54,15 @@ def _review_md(evaluation, reports: dict) -> str:
     return "\n".join(lines)
 
 
-def generate(language, difficulty):
+def generate(language, difficulty, state):
+    if not state or "session" not in state:
+        raise gr.Error("Start the interview first so the problem can use the job description.")
     try:
-        session = coding_pipeline.get_problem(difficulty, language)
+        session = coding_pipeline.get_problem(
+            difficulty,
+            language,
+            state["session"].job_profile,
+        )
     except Exception as err:
         raise gr.Error(f"Could not load a coding problem: {err}")
     return (
@@ -87,7 +93,7 @@ def review(code, session):
     return _review_md(evaluation, reports), gr.update(value="", visible=False), _button_ready("Run tests and review")
 
 
-def build() -> None:
+def build(state) -> None:
     gr.HTML(f"<style>{LOADING_CSS}</style>")
     coding_state = gr.State(None)
     with gr.Row():
@@ -107,7 +113,7 @@ def build() -> None:
         outputs=[generate_btn, loading, review_btn],
     ).then(
         generate,
-        [language, difficulty],
+        [language, difficulty, state],
         [coding_state, problem_md, code, result_md, loading, generate_btn, review_btn],
     )
     generate_event.then(lambda: gr.update(value="", visible=False), outputs=loading)

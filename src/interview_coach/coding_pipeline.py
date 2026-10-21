@@ -3,9 +3,10 @@ import json
 from dataclasses import dataclass
 
 from interview_coach.coding import runner
+from interview_coach.crew_coding_problem import CodingProblemCrew
 from interview_coach.crew import CodeReviewCrew
 from interview_coach.pipeline import _model
-from interview_coach.schemas import CodeEvaluation, Level
+from interview_coach.schemas import CodeEvaluation, CodingProblem
 
 DIFFICULTY_LEVELS = {"easy": "junior", "medium": "mid", "hard": "senior"}
 LANGUAGE_NAMES = {"Python": "python", "JavaScript": "javascript", "C#": "csharp"}
@@ -17,11 +18,27 @@ class CodingSession:
     visible_tests: list[dict]
 
 
-def get_problem(difficulty: str, language: str = "python") -> CodingSession:
-    level = DIFFICULTY_LEVELS.get(difficulty.lower(), difficulty.lower())
+def get_problem(difficulty: str, language: str = "python", job_profile=None) -> CodingSession:
     language = LANGUAGE_NAMES.get(language, language.lower())
     if language not in runner.LANGUAGES:
         raise ValueError(f"Unsupported language: {language}")
+    if job_profile is not None:
+        result = CodingProblemCrew().crew().kickoff(
+            inputs={
+                "job_profile_json": job_profile.model_dump_json(),
+                "language": language,
+                "difficulty": difficulty.lower(),
+            }
+        )
+        generated = _model(result, CodingProblem).model_dump()
+        generated["language"] = language
+        generated["difficulty"] = difficulty.lower()
+        return CodingSession(
+            problem=generated,
+            visible_tests=[test for test in generated["tests"] if test["visible"]],
+        )
+
+    level = DIFFICULTY_LEVELS.get(difficulty.lower(), difficulty.lower())
     problems = [
         problem
         for problem in runner.load_all_problems()
@@ -44,14 +61,19 @@ def get_problem(difficulty: str, language: str = "python") -> CodingSession:
     return CodingSession(problem=problem, visible_tests=visible_tests)
 
 
-def run_solution(code: str, problem_id: str, language: str = "python") -> dict:
+def run_solution(
+    code: str,
+    problem_id: str,
+    language: str = "python",
+    problem: dict | None = None,
+) -> dict:
     """Run both visible and hidden cases; runner output redacts hidden inputs."""
-    return runner.run_tests(code, problem_id, language)
+    return runner.run_tests(code, problem_id, language, problem)
 
 
 def review_solution(session: CodingSession, code: str) -> tuple[CodeEvaluation, dict]:
     language = session.problem["language"]
-    test_report = run_solution(code, session.problem["id"], language)
+    test_report = run_solution(code, session.problem["id"], language, session.problem)
     result = CodeReviewCrew().crew().kickoff(
         inputs={
             "problem_json": json.dumps(session.problem),
@@ -66,7 +88,12 @@ def review_solution(session: CodingSession, code: str) -> tuple[CodeEvaluation, 
 
     suggested_report = {"passed": 0, "total": 0, "error": None, "results": []}
     if evaluation.improved_solution.strip():
-        suggested_report = run_solution(evaluation.improved_solution, session.problem["id"], language)
+        suggested_report = run_solution(
+            evaluation.improved_solution,
+            session.problem["id"],
+            language,
+            session.problem,
+        )
         evaluation.suggested_tests_passed = suggested_report["passed"]
         evaluation.suggested_tests_total = suggested_report["total"]
         if suggested_report["error"] or suggested_report["passed"] != suggested_report["total"]:

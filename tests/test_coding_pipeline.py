@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from interview_coach import coding_pipeline
-from interview_coach.schemas import CodeEvaluation
+from interview_coach.schemas import CodeEvaluation, CodingProblem, JobProfile
 
 
 GOOD = """
@@ -27,6 +27,45 @@ def test_get_problem_builds_javascript_variant():
     session = coding_pipeline.get_problem("medium", "JavaScript")
     assert session.problem["language"] == "javascript"
     assert "module.exports" in session.problem["starter_code"]
+
+
+def test_get_problem_generates_from_job_profile(monkeypatch):
+    profile = JobProfile(
+        title="Backend Engineer",
+        seniority="mid",
+        required_skills=["Python", "APIs"],
+        responsibilities=["Build services"],
+        interview_themes=["Reliability"],
+    )
+    generated = {
+        "id": "generated-1",
+        "title": "API Request Aggregation",
+        "prompt": "Aggregate request counts by route.",
+        "function_name": "aggregate_requests",
+        "starter_code": "def aggregate_requests(events):\n    pass\n",
+        "tests": [
+            {"args": [[{"route": "/health"}]], "expected": {"/health": 1}, "visible": True},
+            {"args": [[]], "expected": {}, "visible": False},
+            {"args": [[{"route": "/api"}]], "expected": {"/api": 1}, "visible": True},
+        ],
+    }
+    captured = {}
+
+    class FakeCrew:
+        def crew(self):
+            return self
+
+        def kickoff(self, inputs):
+            captured.update(inputs)
+            return SimpleNamespace(pydantic=CodingProblem.model_validate(generated))
+
+    monkeypatch.setattr(coding_pipeline, "CodingProblemCrew", FakeCrew)
+    session = coding_pipeline.get_problem("medium", "Python", profile)
+
+    assert session.problem["title"] == "API Request Aggregation"
+    assert session.problem["language"] == "python"
+    assert len(session.visible_tests) == 2
+    assert '"Backend Engineer"' in captured["job_profile_json"]
 
 
 def test_review_solution_rechecks_agent_suggestion(monkeypatch):
