@@ -7,8 +7,6 @@ QuestionType = Literal["behavioral", "technical", "situational"]
 Level = Literal["junior", "mid", "senior"]
 
 DISCLAIMER = "Practice coaching estimate. Not a hiring decision."
-
-
 class JobProfile(BaseModel):
     title: str
     seniority: Level
@@ -123,3 +121,42 @@ class CodeEvaluation(BaseModel):
     feedback: list[str]
     improved_solution: str
     disclaimer: str = DISCLAIMER
+
+
+class CodingTest(BaseModel):
+    args: list[
+        str
+        | int
+        | float
+        | bool
+        | list[str]
+        | list[int]
+        | list[list[int]]
+        | list[dict[str, str | int]]
+        | dict[str, str]
+        | dict[str, int]
+        | None
+    ]
+    expected: (
+        str
+        | int
+        | float
+        | bool
+        | list[str]
+        | list[int]
+        | list[list[int]]
+        | list[dict[str, str | int]]
+        | dict[str, str]
+        | dict[str, int]
+        | None
+    )
+    visible: bool
+
+
+class CodingProblem(BaseModel):
+    id: str
+    title: str
+    prompt: str
+    function_name: str
+    starter_code: str
+    tests: list[CodingTest] = Field(min_length=3, max_length=20)
