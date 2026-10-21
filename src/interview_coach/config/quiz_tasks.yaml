@@ -2,6 +2,7 @@ generate_mcqs:
     description: >
         Job profile (JSON): {job_profile_json}
         Seniority: {seniority}
+        Prioritize these skills first: {focus_skills}.
 
         Write {count} multiple-choice questions on the required skills and responsibilities.
         Each question has exactly 4 distinct options, one correct answer, a skill name taken
