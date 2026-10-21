@@ -23,10 +23,12 @@ analyze_resume:
 plan_interview:
     description: >
         Using the job profile and resume profile, call get_interview_questions once for
-        each category: behavioral, technical, situational. Use the job title as role and
-        the job seniority as level. Pick one question per category, adapt the wording to
-        the candidate evidence, and keep the source question id. Order: behavioral,
-        technical, situational.
+        each category: behavioral, technical, situational. Use the job title as role, the
+        job seniority as level, quantity 3, and exclude_ids {seen_question_ids}. The tool
+        returns a random sample, so candidates differ between sessions. From each sample,
+        pick the one question that best fits the job requirements and the candidate
+        evidence. Adapt its wording lightly to the candidate evidence and keep its source
+        question id. Order: behavioral, technical, situational.
     expected_output: >
         JSON matching the InterviewPlan schema with exactly 3 questions.
     agent: interview_planner
@@ -81,4 +83,3 @@ write_final_report:
     expected_output: >
         JSON matching the FinalReport schema.
     agent: evaluation_coach
-

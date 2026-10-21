@@ -26,6 +26,7 @@ class InterviewSession:
     plan: InterviewPlan
     warnings: list[str] = field(default_factory=list)
     evaluations: list[AnswerEvaluation] = field(default_factory=list)
+    question_ids: list[str] = field(default_factory=list)
 
 def _history(session: InterviewSession) -> str:
     if not session.evaluations:
@@ -42,19 +43,25 @@ def _model(output, cls):
     return model
 
 
-def start_session(resume_raw: str, job_raw: str) -> InterviewSession:
+def start_session(resume_raw: str, job_raw: str, seen_ids: list[str] | None = None) -> InterviewSession:
     resume = input_guards.check_text(resume_raw, "resume", 200, 20000)
     job = input_guards.check_text(job_raw, "job description", 100, 10000)
     result = PlanningCrew().crew().kickoff(
-        inputs={"job_description": job.text, "resume_text": resume.text}
+        inputs={
+            "job_description": job.text,
+            "resume_text": resume.text,
+            "seen_question_ids": json.dumps(seen_ids or []),
+        }
     )
     outputs = result.tasks_output
+    plan = _model(outputs[2], InterviewPlan)
     return InterviewSession(
         resume_text=resume.text,
         job_profile=_model(outputs[0], JobProfile),
         resume_profile=_model(outputs[1], ResumeProfile),
-        plan=_model(outputs[2], InterviewPlan),
+        plan=plan,
         warnings=resume.warnings + job.warnings,
+        question_ids=[q.source_question_id for q in plan.questions],
     )
 
 
