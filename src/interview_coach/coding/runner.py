@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+import shutil
 
 DATA = Path(__file__).resolve().parents[3] / "mcp_server" / "data" / "coding_problems.json"
 TIMEOUT_SECONDS = 5
@@ -254,6 +255,17 @@ public static class Harness
         timeout_seconds=30,
     )
 
+def available_languages() -> list[str]:
+    """Languages enabled here. Python only by default. Set ENABLED_LANGUAGES=python,javascript,csharp to add more."""
+    enabled = {part.strip().lower() for part in os.getenv("ENABLED_LANGUAGES", "python").split(",")}
+    tools = {
+        "python": True,
+        "javascript": shutil.which("node") is not None,
+        "csharp": shutil.which("dotnet") is not None,
+    }
+    languages = [name for name in ("python", "javascript", "csharp") if name in enabled and tools[name]]
+    return languages or ["python"]
+
 
 def run_tests(
     code: str,
@@ -261,8 +273,8 @@ def run_tests(
     language: str = "python",
     problem: dict | None = None,
 ) -> dict:
-    if language not in LANGUAGES:
-        raise ValueError(f"Unsupported language: {language}")
+    if language not in available_languages():
+        raise ValueError(f"{language} is not enabled on this deployment.")
     problem = problem or load_problem(problem_id)
     tests = problem["tests"]
     if len(code) > MAX_CODE_CHARS:
